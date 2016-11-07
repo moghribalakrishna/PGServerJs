@@ -199,9 +199,9 @@ describe.only('Controller ', function(done) {
 
   });
 
-  it('Delete Supplier ', function(done) {
-
-    return supplierController.deleteSupplier(createdSupplierId).bind(this).then(function(deleteStatus) {
+  it('Delete Supplier ', function() {
+    console.log('Deleting Supplier with Id=', createdSupplierId);
+    return supplierController.deleteSupplier(createdSupplierId).then(function(deleteStatus) {
       return supplierController.getSupplier(createdSupplierId).then(function(result) {
         console.log(result);
       });
