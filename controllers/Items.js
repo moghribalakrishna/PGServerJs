@@ -1,90 +1,247 @@
-//not implemented phptojs\JsPrinter\JsPrinter::pStmt_Nop
-var ItemModel  = require('../models').profitGuru_items;
+/*jshint sub:true*/
+var ItemModel = require('../models').profitGuru_items;
+var ItemTaxesModel = require('../models').profitGuru_items_taxes;
+var ItemDiscountsModel = require('../models').profitGuru_discounts;
+var ItemQuantitiesModel = require('../models').profitGuru_item_quantities;
 
-var Items = (function() {
-    function Items() {
-        window.__IS_INHERITANCE__ = false;
+var Items = function() {
+
+    function isUndefinedOrNull(arg) {
+        return arg === undefined || arg === '';
     }
-    Items.prototype.saveItemRestApi = function(_REQUEST) {
-        //$item_id=$_REQUEST ['item_id'];
-        var successDis;
-        successDis = false;
-        var successAllTaxes;
-        successAllTaxes = false;
-        var item_id, _REQUEST;
-        item_id = _REQUEST['item_id'] == '' ? -1 : _REQUEST['item_id'];
-        _REQUEST['1_quantity'] = _REQUEST['quantity'] ? _REQUEST['quantity'] : '';
+    this.createItem = function(requestData) {
+        var defered = q.defer();
+        var response = {};
+
+        if (!isUndefinedOrNull(requestData['item_id'])) {
+            response.error = 'Item asked to create already has an item_id=' + requestData['item_id'];
+            defered.reject(response);
+        }
+
+        var successDis = false;
+        var successAllTaxes = false;
+        //var item_id = requestData['item_id'] === '' ? -1 : requestData['item_id'];
+        requestData['1_quantity'] = requestData['quantity'] ? requestData['quantity'] : '';
         var upload_success;
-        //TODO BK
-        //upload_success = this._handle_image_upload();
-        //var upload_data;
-        //upload_data = this.upload.data();
+
+        var Item_discount = requestData['discount'];
+        var loyaltyPerc = requestData['loyaltyPerc'];
+        //TODO Use moment for this
+        var date_expry = requestData['expiry'] === '' ? date_create('0000-00-00 00:00:00') : date_create(requestData['expiry']);
+        var Expiry_date = date_format(date_expry, 'Y/m/d');
+
+        var ItemNprice = requestData['itemNprice'];
+        var Barcode = requestData['item_number'] === '' ? 0 : requestData['item_number'];
+
+        var item_data = {
+            'name': requestData['name'],
+            'ItemType': requestData['ItemType'] ? requestData['ItemType'] : '',
+            'description': requestData['description'] ? requestData['description'] : '',
+            'category': requestData['category'],
+            'supplier_id': requestData['supplier_id'] === 0 ? null : requestData['supplier_id'],
+            'item_number': requestData['item_number'] === '' ? 0 : requestData['item_number'],
+            'cost_price': requestData['cost_price'],
+            'unit_price': requestData['itemNprice'] === 0 ? requestData['unit_price'] : 0,
+            'reorder_level': requestData['reorder_level'] === null ? 0 : requestData['reorder_level'],
+            'receiving_quantity': requestData['receiving_quantity'],
+            'allow_alt_description': requestData['allow_alt_description'] === null ? 0 : requestData['allow_alt_description'],
+            'is_serialized': requestData['is_serialized'] === null ? 0 : requestData['is_serialized'],
+            'isprepared': requestData['isprepared'] === null ? 'false' : requestData['isprepared'],
+            'issellable': requestData['issellable'] === null ? 'false' : requestData['issellable'],
+            'isbought': requestData['isbought'] === null ? 'false' : requestData['isbought'],
+            'deleted': requestData['is_deleted'] === null ? '' : requestData['is_deleted'],
+            'custom1': requestData['custom1'] ? requestData['custom1'] : '',
+            'custom2': requestData['custom2'] === null ? '' : requestData['custom2'],
+            'custom3': requestData['custom3'] === null ? '' : requestData['custom3'],
+            'custom4': requestData['custom4'] === null ? '' : requestData['custom4'],
+            'custom5': requestData['custom5'] === null ? '' : requestData['custom5'],
+            'custom6': requestData['custom6'] === null ? '' : requestData['custom6'],
+            'custom7': requestData['custom7'] === null ? '' : requestData['custom7'],
+            'custom8': requestData['custom8'] === null ? '' : requestData['custom8'],
+            'custom9': requestData['custom9'] === null ? '' : requestData['custom9'],
+            'custom10': requestData['custom10'] === null ? '' : requestData['custom10']
+        };
+
+        // ItemModel.isItemExists(Barcode, requestData['name']).then(function(isItemExists) {});
+
+        //TODO get the logged in Employee
+        var employee_id = this.Employee.get_logged_in_employee_info().person_id;
+
+        if (saveItem4table === true && this.Item.save(item_data)) {
+
+            var items_taxes_data = [];
+
+            var tax_names;
+            tax_names = {
+                0: requestData['tax_name_1'],
+                1: requestData['tax_name_2']
+            };
+            var tax_percents;
+            tax_percents = {
+                0: requestData['tax_percent_1'],
+                1: requestData['tax_percent_2']
+            };
+
+            var k;
+            for (k = 0; k < count(tax_percents); k++) {
+                if (is_numeric(tax_percents[k])) {
+                    items_taxes_data.push({
+                        'name': tax_names[k],
+                        'percent': tax_percents[k]
+                    });
+                }
+            }
+            //TODO use ItemTaxesModel
+            Item_taxes.save(items_taxes_data, item_id);
+            var items_all_taxes = [];
+            items_all_taxes.push({
+                'tax1_name': requestData['tax_name_1'],
+                'tax1_percent': requestData['tax_percent_1'],
+                'tax2_name': requestData['tax_name_2'],
+                'tax2_percent': requestData['tax_percent_2']
+            });
+
+            // Todo use ItemTaxesModel, ######find out why their is saveAllTaxes###
+            successAllTaxes &= this.Item_taxes.saveAllTaxes(items_all_taxes, item_id, new_item);
+
+            //TODO use ItemDiscountsModel
+            successDis &= this.Item_taxes.save_discount(Item_discount, loyaltyPerc, Expiry_date, ItemNprice, item_id, new_item);
+            //Save item quantity
+            var stock_locations;
+            stock_locations = this.Stock_location.get_undeleted_all().result_array();
+            var _key_;
+            for (_key_ in stock_locations) {
+                var location_data;
+                location_data = stock_locations[_key_];
+                var updated_quantity;
+                updated_quantity = requestData[location_data['location_id'] + '_quantity'];
+                var location_detail;
+                location_detail = {
+                    'item_id': item_id,
+                    'location_id': location_data['location_id'],
+                    'quantity': updated_quantity,
+                    'reorder_level': item_data['reorder_level']
+                };
+                var item_quantity;
+
+                //TODO use ItemQuantitiesModel
+                item_quantity = this.Item_quantity.get_item_quantity(item_id, location_data['location_id']);
+                if (item_quantity.quantity != updated_quantity || new_item) {
+                    success &= this.Item_quantity.save(location_detail, item_id, location_data['location_id']);
+                    var inv_data;
+                    inv_data = {
+                        'trans_date': date('Y-m-d H:i:s'),
+                        'trans_items': item_id,
+                        'trans_user': employee_id,
+                        'trans_location': location_data['location_id'],
+                        'trans_comment': this.lang.line('items_manually_editing_of_quantity'),
+                        'trans_inventory': updated_quantity - item_quantity.quantity
+                    };
+                    success &= this.Inventory.insert(inv_data);
+                }
+            }
+            if (success && upload_success) {
+
+                var success_message = 'items_successful_' + (new_item ? 'adding' : 'updating') + ' ' + item_data['name'];
+
+                console.log(json_encode({
+                    'message': success_message
+                }));
+                //TODO now Add the Item to couch
+            } else {
+                var error_message = 'items_error_adding_updating' + ' ' + item_data['name'];
+                console.log(json_encode({
+                    'message': error_message
+                }));
+            }
+        } else {
+
+            var itemExistsError;
+            itemExistsError = {};
+            if (saveItem4table === false) {
+                itemExistsError['itemExists'] = 'itemExists';
+                console.log(json_encode({
+                    'itemExists': itemExistsError
+                }));
+            } else {
+                console.log(json_encode({
+                    'message': 'items_error_adding_updating' + ' ' + item_data['name']
+                }));
+            }
+        }
+
+        return defered.promise;
+    };
+
+    this.updateItem = function(requestData) {
+        var successDis = false;
+        var successAllTaxes = false;
+        var item_id = requestData['item_id'] === '' ? -1 : requestData['item_id'];
+        requestData['1_quantity'] = requestData['quantity'] ? requestData['quantity'] : '';
+        var upload_success;
 
         //Save item data
-        var Item_discount;
-        Item_discount = _REQUEST['discount'];
-        var loyaltyPerc;
-        loyaltyPerc = _REQUEST['loyaltyPerc'];
-        //$Expiry_date = $_REQUEST['expiry'] ? $_REQUEST['expiry'] : null;
-        var date_expry;
-        date_expry = _REQUEST['expiry'] == '' ? date_create('0000-00-00 00:00:00') : date_create(_REQUEST['expiry']);
-        var Expiry_date;
-        Expiry_date = date_format(date_expry, 'Y/m/d');
-        var ItemNprice;
-        ItemNprice = _REQUEST['itemNprice'];
-        var Barcode;
-        Barcode = _REQUEST['item_number'] == '' ? 0 : _REQUEST['item_number'];
-        var itemExits;
-        itemExits = this.Item.exists_Item(Barcode, _REQUEST['name']);
-        if (itemExits == 0) {
-            var saveItem4table;
+
+        var Item_discount = requestData['discount'];
+        var loyaltyPerc = requestData['loyaltyPerc'];
+        var date_expry = requestData['expiry'] === '' ? date_create('0000-00-00 00:00:00') : date_create(requestData['expiry']);
+        var Expiry_date = date_format(date_expry, 'Y/m/d');
+        var ItemNprice = requestData['itemNprice'];
+        var Barcode = requestData['item_number'] === '' ? 0 : requestData['item_number'];
+        var itemExits = this.Item.exists_Item(Barcode, requestData['name']);
+        var saveItem4table;
+        var data = {};
+
+        if (itemExits === 0) {
             saveItem4table = true;
+
         } else {
-            if (_REQUEST['editingExistingItem'] === 'true') {
+            if (requestData['editingExistingItem'] === 'true') {
                 saveItem4table = true;
             } else {
                 saveItem4table = false;
-                var data;
+
                 data['itemExists'] = 'itemExists';
             }
         }
         var item_data;
         item_data = {
-            'name': _REQUEST['name'],
-            'ItemType': _REQUEST['ItemType'] ? _REQUEST['ItemType'] : '',
-            'description': _REQUEST['description'] ? _REQUEST['description'] : '',
-            'category': _REQUEST['category'],
-            'supplier_id': _REQUEST['supplier_id'] == 0 ? null : _REQUEST['supplier_id'],
-            'item_number': _REQUEST['item_number'] == '' ? 0 : _REQUEST['item_number'],
-            'cost_price': _REQUEST['cost_price'],
-            'unit_price': _REQUEST['itemNprice'] == 0 ? _REQUEST['unit_price'] : 0,
-            'reorder_level': _REQUEST['reorder_level'] == null ? 0 : _REQUEST['reorder_level'],
-            'receiving_quantity': _REQUEST['receiving_quantity'],
-            'allow_alt_description': _REQUEST['allow_alt_description'] == null ? 0 : _REQUEST['allow_alt_description'],
-            'is_serialized': _REQUEST['is_serialized'] == null ? 0 : _REQUEST['is_serialized'],
-            'isprepared': _REQUEST['isprepared'] == null ? 'false' : _REQUEST['isprepared'],
-            'issellable': _REQUEST['issellable'] == null ? 'false' : _REQUEST['issellable'],
-            'isbought': _REQUEST['isbought'] == null ? 'false' : _REQUEST['isbought'],
-            'deleted': _REQUEST['is_deleted'] == null ? '' : _REQUEST['is_deleted'],
-            'custom1': _REQUEST['custom1'] ? _REQUEST['custom1'] : '',
-            'custom2': _REQUEST['custom2'] == null ? '' : _REQUEST['custom2'],
-            'custom3': _REQUEST['custom3'] == null ? '' : _REQUEST['custom3'],
-            'custom4': _REQUEST['custom4'] == null ? '' : _REQUEST['custom4'],
-            'custom5': _REQUEST['custom5'] == null ? '' : _REQUEST['custom5'],
-            'custom6': _REQUEST['custom6'] == null ? '' : _REQUEST['custom6'],
-            'custom7': _REQUEST['custom7'] == null ? '' : _REQUEST['custom7'],
-            'custom8': _REQUEST['custom8'] == null ? '' : _REQUEST['custom8'],
-            'custom9': _REQUEST['custom9'] == null ? '' : _REQUEST['custom9'],
-            'custom10': _REQUEST['custom10'] == null ? '' : _REQUEST['custom10']
+            'name': requestData['name'],
+            'ItemType': requestData['ItemType'] ? requestData['ItemType'] : '',
+            'description': requestData['description'] ? requestData['description'] : '',
+            'category': requestData['category'],
+            'supplier_id': requestData['supplier_id'] === 0 ? null : requestData['supplier_id'],
+            'item_number': requestData['item_number'] === '' ? 0 : requestData['item_number'],
+            'cost_price': requestData['cost_price'],
+            'unit_price': requestData['itemNprice'] === 0 ? requestData['unit_price'] : 0,
+            'reorder_level': requestData['reorder_level'] === null ? 0 : requestData['reorder_level'],
+            'receiving_quantity': requestData['receiving_quantity'],
+            'allow_alt_description': requestData['allow_alt_description'] === null ? 0 : requestData['allow_alt_description'],
+            'is_serialized': requestData['is_serialized'] === null ? 0 : requestData['is_serialized'],
+            'isprepared': requestData['isprepared'] === null ? 'false' : requestData['isprepared'],
+            'issellable': requestData['issellable'] === null ? 'false' : requestData['issellable'],
+            'isbought': requestData['isbought'] === null ? 'false' : requestData['isbought'],
+            'deleted': requestData['is_deleted'] === null ? '' : requestData['is_deleted'],
+            'custom1': requestData['custom1'] ? requestData['custom1'] : '',
+            'custom2': requestData['custom2'] === null ? '' : requestData['custom2'],
+            'custom3': requestData['custom3'] === null ? '' : requestData['custom3'],
+            'custom4': requestData['custom4'] === null ? '' : requestData['custom4'],
+            'custom5': requestData['custom5'] === null ? '' : requestData['custom5'],
+            'custom6': requestData['custom6'] === null ? '' : requestData['custom6'],
+            'custom7': requestData['custom7'] === null ? '' : requestData['custom7'],
+            'custom8': requestData['custom8'] === null ? '' : requestData['custom8'],
+            'custom9': requestData['custom9'] === null ? '' : requestData['custom9'],
+            'custom10': requestData['custom10'] === null ? '' : requestData['custom10']
         };
         if (!empty(upload_data['orig_name'])) {
             item_data['pic_id'] = upload_data['raw_name'];
         }
         var employee_id;
         employee_id = this.Employee.get_logged_in_employee_info().person_id;
+
         var cur_item_info;
         cur_item_info = this.Item.get_info(item_id);
-        if (saveItem4table == true && this.Item.save(item_data, item_id)) {
+        if (saveItem4table === true && this.Item.save(item_data, item_id)) {
             var success;
             success = true;
             var new_item;
@@ -95,37 +252,38 @@ var Items = (function() {
                 new_item = true;
             }
             /*$items_taxes_data = array();
-            $tax_names = $_REQUEST ['tax_names'];
-            $tax_percents = $_REQUEST ['tax_percents'];*/
-            var items_taxes_data;
-            items_taxes_data = {};
+            $tax_names = $requestData ['tax_names'];
+            $tax_percents = $requestData ['tax_percents'];*/
+            var items_taxes_data = [];
+
             var tax_names;
             tax_names = {
-                0: _REQUEST['tax_name_1'],
-                1: _REQUEST['tax_name_2']
+                0: requestData['tax_name_1'],
+                1: requestData['tax_name_2']
             };
             var tax_percents;
             tax_percents = {
-                0: _REQUEST['tax_percent_1'],
-                1: _REQUEST['tax_percent_2']
+                0: requestData['tax_percent_1'],
+                1: requestData['tax_percent_2']
             };
             var k;
             for (k = 0; k < count(tax_percents); k++) {
                 if (is_numeric(tax_percents[k])) {
-                    items_taxes_data[] = {
+                    items_taxes_data.push({
                         'name': tax_names[k],
                         'percent': tax_percents[k]
-                    };
+                    });
                 }
             }
             success &= this.Item_taxes.save(items_taxes_data, item_id);
-            var items_all_taxes;
-            items_all_taxes[] = {
-                'tax1_name': _REQUEST['tax_name_1'],
-                'tax1_percent': _REQUEST['tax_percent_1'],
-                'tax2_name': _REQUEST['tax_name_2'],
-                'tax2_percent': _REQUEST['tax_percent_2']
-            };
+            var items_all_taxes = [];
+            items_all_taxes.push({
+                'tax1_name': requestData['tax_name_1'],
+                'tax1_percent': requestData['tax_percent_1'],
+                'tax2_name': requestData['tax_name_2'],
+                'tax2_percent': requestData['tax_percent_2']
+            });
+
             successAllTaxes &= this.Item_taxes.saveAllTaxes(items_all_taxes, item_id, new_item);
             successDis &= this.Item_taxes.save_discount(Item_discount, loyaltyPerc, Expiry_date, ItemNprice, item_id, new_item);
             //Save item quantity
@@ -136,8 +294,7 @@ var Items = (function() {
                 var location_data;
                 location_data = stock_locations[_key_];
                 var updated_quantity;
-                updated_quantity = _REQUEST[location_data['location_id'].
-                    '_quantity'];
+                updated_quantity = requestData[location_data['location_id'] + '_quantity'];
                 var location_detail;
                 location_detail = {
                     'item_id': item_id,
@@ -162,75 +319,60 @@ var Items = (function() {
                 }
             }
             if (success && upload_success) {
-                var success_message;
-                success_message = this.lang.line('items_successful_'.(new_item ? 'adding' : 'updating')).
-                ' '.item_data['name'];
-                //echo json_encode(array('success'=>true,'message'=>$success_message,'item_id'=>$item_id));
-                //echo json_encode(array('message'=>$success_message));
+
+                var success_message = 'items_successful_' + (new_item ? 'adding' : 'updating') + ' ' + item_data['name'];
+
                 console.log(json_encode({
                     'message': success_message
                 }));
                 //NodeServerUrl taken from index.html
-                if (new_item) {
-                    var url;
-                    url = NodeServerUrl.
-                    '?event=itemSave&id='.item_id.
-                    '&location_id='.location_data['location_id'].
-                    '&appType='.APPTYPE;
-                    url = urlencode(url);
-                    file_get_contents(urldecode(url));
-                } else {
-                    url = NodeServerUrl.
-                    '?event=itemEdit&id='.item_id.
-                    '&location_id='.location_data['location_id'].
-                    '&appType='.APPTYPE;
-                    url = urlencode(url);
-                    file_get_contents(urldecode(url));
-                }
+                // if (new_item) {
+                //     var url;
+                //     url = NodeServerUrl.
+                //     '?event=itemSave&id='.item_id.
+                //     '&location_id='.location_data['location_id'].
+                //     '&appType='.APPTYPE;
+                //     url = urlencode(url);
+                //     file_get_contents(urldecode(url));
+                // } else {
+                //     url = NodeServerUrl.
+                //     '?event=itemEdit&id='.item_id.
+                //     '&location_id='.location_data['location_id'].
+                //     '&appType='.APPTYPE;
+                //     url = urlencode(url);
+                //     file_get_contents(urldecode(url));
+                // }
             } else {
-                var error_message;
-                error_message = upload_success ? this.lang.line('items_error_adding_updating').
-                ' '.item_data['name']: this.upload.display_errors();
-                /*echo json_encode(array('success'=>false,
-                'message'=>$error_message,'item_id'=>$item_id)); */
+                var error_message = 'items_error_adding_updating' + ' ' + item_data['name'];
                 console.log(json_encode({
                     'message': error_message
                 }));
             }
         } else {
-            /*echo json_encode(array('success'=>false,
-            	'message'=>$this->lang->line('items_error_adding_updating').' '
-            	.$item_data['name'],'item_id'=>-1));*/
+
             var itemExistsError;
             itemExistsError = {};
-            if (saveItem4table == false) {
+            if (saveItem4table === false) {
                 itemExistsError['itemExists'] = 'itemExists';
                 console.log(json_encode({
                     'itemExists': itemExistsError
                 }));
             } else {
                 console.log(json_encode({
-                    'message': this.lang.line('items_error_adding_updating').
-                    ' '.item_data['name']
+                    'message': 'items_error_adding_updating' + ' ' + item_data['name']
                 }));
             }
         }
     };
-    Items.prototype.deleteItemsRestApi = function() {
-        var items_to_delete, _REQUEST;
-        items_to_delete = _REQUEST['item_id'];
+    this.deleteItemsRestApi = function() {
+        var items_to_delete, requestData;
+        items_to_delete = requestData['item_id'];
         if (this.Item.delete_list(items_to_delete)) {
-            var url;
-            url = NodeServerUrl.
-            '?event=itemDelete&id='.items_to_delete.
-            '&appType='.APPTYPE;
-            url = urlencode(url);
-            file_get_contents(urldecode(url));
+            //TODO update couch
+            var message = 'items_successful_deleted' + ' ' + count(items_to_delete);
             console.log(json_encode({
                 'success': true,
-                'message': this.lang.line('items_successful_deleted').
-                ' '.count(items_to_delete).
-                ' '.this.lang.line('items_one_or_multiple')
+                'message': message
             }));
         } else {
             console.log(json_encode({
@@ -242,23 +384,23 @@ var Items = (function() {
         		//chdir($oldcwd+"/sendEvents2NodeServer");
         	shell_exec($oldcwd.'/sendEvents2NodeServer/sendEvent2NodeServer.js itemDelete '.$oldcwd. "> /dev/null 2>/dev/null &" );*/
     };
-    Items.prototype.saveInventoryRestApi = function() {
-        var item_id, _REQUEST;
-        item_id = _REQUEST['item_id'] == '' ? -1 : _REQUEST['item_id'];
+    this.saveInventoryRestApi = function() {
+        var item_id, requestData;
+        item_id = requestData['item_id'] === '' ? -1 : requestData['item_id'];
         var employee_id;
         employee_id = this.Employee.get_logged_in_employee_info().person_id;
         var cur_item_info;
         cur_item_info = this.Item.get_info(item_id);
         var location_id;
-        location_id = _REQUEST['stock_location'];
+        location_id = requestData['stock_location'];
         var inv_data;
         inv_data = {
             'trans_date': date('Y-m-d H:i:s'),
             'trans_items': item_id,
             'trans_user': employee_id,
             'trans_location': location_id,
-            'trans_comment': _REQUEST['trans_comment'] ? _REQUEST['trans_comment'] : '',
-            'trans_inventory': _REQUEST['newquantity']
+            'trans_comment': requestData['trans_comment'] ? requestData['trans_comment'] : '',
+            'trans_inventory': requestData['newquantity']
         };
         this.Inventory.insert(inv_data);
         //Update stock quantity
@@ -268,19 +410,19 @@ var Items = (function() {
         item_quantity_data = {
             'item_id': item_id,
             'location_id': location_id,
-            'quantity': item_quantity.quantity + _REQUEST['newquantity'],
+            'quantity': item_quantity.quantity + requestData['newquantity'],
             'reorder_level': cur_item_info.reorder_level
         };
         if (this.Item_quantity.save(item_quantity_data, item_id, location_id)) {
-            var url;
-            url = NodeServerUrl.
-            '?event=itemUpdateInventory&id='.item_id.
-            '&location_id='.location_id.
-            '&appType='.APPTYPE;
-            url = urlencode(url);
-            file_get_contents(urldecode(url));
+            // var url;
+            // url = NodeServerUrl.
+            // '?event=itemUpdateInventory&id='.item_id.
+            // '&location_id='.location_id.
+            // '&appType='.APPTYPE;
+            // url = urlencode(url);
+            // file_get_contents(urldecode(url));
             console.log(json_encode({
-                'message': this.lang.line('items_successful_updating')
+                'message': 'items_successful_updating'
             }));
         } else {
             console.log(json_encode({
@@ -288,11 +430,11 @@ var Items = (function() {
             }));
         }
     };
-    Items.prototype.getItemsEditRestApi = function() {
+    this.getItemsEditRestApi = function() {
         var a;
         a = 3;
-        var item_id, _REQUEST;
-        item_id = _REQUEST['item_id_edit'];
+        var item_id, requestData;
+        item_id = requestData['item_id_edit'];
         //$item_id=27;
         var data;
         data['item_info'] = this.Item.get_info(item_id);
@@ -331,24 +473,25 @@ var Items = (function() {
             'data': data
         }));
     };
-    Items.prototype.getInvetaryDetailRestApi = function() {
+    this.getInvetaryDetailRestApi = function() {
         var a;
         a = 3;
-        var item_id, _REQUEST;
-        item_id = _REQUEST['item_id_edit'];
+        var item_id, requestData;
+        item_id = requestData['item_id_edit'];
         var location_id;
-        location_id = _REQUEST['location_id'];
+        location_id = requestData['location_id'];
         var inventory;
         inventory = this.Inventory.get_inventory_data_for_item(item_id, location_id).result_array();
         var inventoryJson;
         inventoryJson = {};
         var _key_;
+        var employee;
         for (_key_ in inventory) {
             var row;
             row = inventory[_key_];
             var person_id;
             person_id = row['trans_user'];
-            var employee;
+
             employee = this.Employee.get_info(person_id);
         }
         var data;
@@ -369,4 +512,6 @@ var Items = (function() {
         }));
     };
     return Items;
-})();
+};
+
+module.exports = new Items();

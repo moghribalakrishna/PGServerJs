@@ -147,6 +147,35 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: undefined
 		}
 	}, {
-		tableName: 'profitGuru_items'
+		// don't add the timestamp attributes (updatedAt, createdAt)
+		timestamps: true,
+
+		// don't delete database entries but set the newly added attribute deletedAt
+		// to the current date (when deletion was done). paranoid will only work if
+		// timestamps are enabled
+		paranoid: true,
+		tableName: 'profitGuru_items',
+		classMethods: {
+			isItemExists: function(itemNumber, itemName) {
+				if (!itemId)
+					itemId = '';
+
+				var defered = q.defer();
+				this.findAndCountAll({
+					where: {
+						deletedAt: {
+							$eq: null
+						},
+						item_number: itemNumber,
+						name: itemName
+					}
+				}).then(function(result) {
+					defered.resolve(result.count > 0);
+				}).catch(function(reason) {
+					defered.reject(reason);
+				});
+				return defered.promise;
+			}
+		}
 	});
 };

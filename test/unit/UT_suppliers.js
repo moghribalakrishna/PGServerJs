@@ -30,7 +30,7 @@ var supplier_data = {
 };
 
 
-describe('model', function() {
+describe('Suppliers UTS', function() {
   before(function() {
     return require('../../models').sequelize.sync();
   });
@@ -41,7 +41,7 @@ describe('model', function() {
     this.createdPersonId;
   });
 
-  describe('Supplier', function() {
+  describe('Supplier Model UTS', function() {
 
     it('create ', function() {
 
@@ -147,7 +147,7 @@ describe('model', function() {
   });
 });
 
-describe.only('Controller ', function(done) {
+describe('Supplier Controller UTs  ', function(done) {
 
   var supplierController = require('../../controllers/Suppliers');
   var supplierReqData = {
