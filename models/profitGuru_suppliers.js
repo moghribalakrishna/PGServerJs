@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_suppliers', {
+	var suppliersTable = sequelize.define('profitGuru_suppliers', {
 
 		person_id: {
 			type: DataTypes.INTEGER(10),
@@ -41,6 +41,14 @@ module.exports = function(sequelize, DataTypes) {
 		paranoid: true,
 		tableName: 'profitGuru_suppliers',
 		classMethods: {
+			associate: function(models) {
+
+				suppliersTable.belongsTo(models.profitGuru_items, {
+					foreignKey: 'supplier_id',
+					constraints: false
+				});
+
+			},
 			isPersonExistsWithThisPhoneNumber: function(phoneNumber) {
 				var defered = q.defer();
 				this.findAndCountAll({
@@ -56,4 +64,5 @@ module.exports = function(sequelize, DataTypes) {
 			}
 		}
 	});
+	return suppliersTable;
 };

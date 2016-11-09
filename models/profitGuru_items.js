@@ -14,19 +14,22 @@ module.exports = function(sequelize, DataTypes) {
 			allowNull: false,
 			defaultValue: undefined
 		},
+
 		category: {
 			type: DataTypes.STRING,
 			allowNull: false,
 			defaultValue: undefined
 		},
-		supplier_id: {
-			type: DataTypes.INTEGER(11),
-			allowNull: true,
-			references: {
-				model: 'profitGuru_suppliers',
-				key: 'person_id'
-			}
-		},
+		// supplier_id: {
+		// 	type: DataTypes.INTEGER(11),
+		// 	allowNull: true,
+		// 	references: {
+		// 		model: 'profitGuru_suppliers',
+		// 		key: 'person_id',
+		// 		allowNull: true,
+
+		// 	}
+		// },
 		item_number: {
 			type: DataTypes.STRING,
 			allowNull: true
