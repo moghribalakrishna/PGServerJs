@@ -12,6 +12,7 @@
     "body-parser": "^1.15.2",
     "chai": "^3.5.0",
     "chai-as-promised": "^6.0.0",
+    "continuation-local-storage": "^3.2.0",
     "cookie-parser": "^1.4.3",
     "debug": "~2.2.0",
     "errors": "^0.3.0",

@@ -87,35 +87,6 @@ describe('Suppliers UTS', function() {
 
     });
 
-    // it('delete ', function() {
-    //   //   debugger;
-    //   //id files is created automatically as its primary key
-    //   var supplier = this.supplierModel.build({
-    //     id: this.createdPersonId
-    //   }, {
-    //     isNewRecord: false
-    //   });
-    //   var person = this.peopleModel.build({
-    //     person_id: this.createdPersonId
-    //   }, {
-    //     isNewRecord: false
-    //   });
-    //   return person.destroy().bind(this).then(function(instance) {
-
-    //     return supplier.destroy().bind(this).then(function(supplier) {
-
-    //       return this.supplierModel.findById(this.createdPersonId).bind(this);
-
-    //     }).then(function(supDeleteResult) {
-    //       console.log('supDeleteResult', supDeleteResult);
-    //       return this.peopleModel.findById(this.createdPersonId).bind(this);
-    //     }).then(function(pepDeleteResult) {
-    //       //  console.log('perDeleteResult', perDeleteResult);
-    //     });
-
-    //   });
-
-    // });
 
     it('delete Supplier', function() {
 
@@ -145,6 +116,65 @@ describe('Suppliers UTS', function() {
     });
 
   });
+});
+
+
+describe.only('Supplier Model UTs With Transactions  ', function(done) {
+  debugger;
+  var transaction;
+  var sequlzDB;
+  before(function() {
+    sequlzDB = require('../../models');
+    return sequlzDB.sequelize.sync()
+  });
+  beforeEach(function() {
+    this.peopleModel = require('../../models').profitGuru_people;
+    this.supplierModel = require('../../models').profitGuru_suppliers;
+    this.createdPersonId;
+
+    return sequlzDB.sequelize
+      .transaction({
+        autocommit: false
+      })
+      .then(function(t) {
+        transaction = t;
+      });
+  });
+
+  afterEach(function() {
+    transaction.rollback();
+  });
+
+  after(function() {
+    sequlzDB.sequelize.drop();
+  });
+
+  // it('should create instance of Thing', () => {
+  //   db._namespace.set('transaction', transaction);
+
+  //   return db.Thing.create({ // Voila, transaction is binded
+  //     name: 'foo'
+  //   }).then(thing => {
+  //     expect(thing.id).to.be.a('number');
+  //     expect(thing.name).to.be.eql('foo');
+  //   });
+  // });
+  it('create ', function() {
+
+    sequlzDB.Sequelize.cls.set('transaction', transaction);
+    return this.peopleModel.create(person_data).bind(this).then(function(person) {
+      this.createdPersonId = supplier_data.person_id = person.person_id;
+      this.createdPersonId = person.person_id;
+
+      return this.supplierModel.create(supplier_data).then(function(supplier) {
+
+        expect(supplier.company_name).to.equal('AlienHu');
+      });
+
+    });
+
+  });
+
 });
 
 describe('Supplier Controller UTs  ', function(done) {
