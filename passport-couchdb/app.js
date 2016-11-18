@@ -18,88 +18,8 @@ var env = process.env.NODE_ENV || 'development',
   config = require('./config/' + env + '.js'),
   resourceful = require('resourceful');
 
-
+var sessionstore = require('sessionstore');
 var User = require('./models/user');
-
-
-// passport.serializeUser(function(user, done) {
-//   done(null, user._id);
-// });
-
-// passport.deserializeUser(function(id, done) {
-//   couch.findUser({
-//     _id: id
-//   }).then(function(user) {
-//     done(null, user[0]);
-//   }).catch(function(reason) {
-//     done(reason, null);
-//   });
-
-// passport.deserializeUser(function(id, done) {
-//   User.find({
-//     _id: id
-//   }, function(err, user) {
-//     if (err || user.length == 0)
-//       done(err, null);
-//     else
-//       done(err, user[0]);
-//   });
-//});
-
-// passport.use(new LocalStrategy(
-//   function(username, password, done) {
-//     process.nextTick(function() {
-//       couch.findUser({
-//         _id: username
-//       }).then(function(user) {
-
-//         if (!user || user.length === 0) {
-//           return done(null, false, {
-//             message: 'Unknown user ' + username
-//           });
-//         }
-//         user = user[0];
-//         if (user.password != password) {
-//           return done(null, false, {
-//             message: 'Invalid password'
-//           });
-//         }
-//         return done(null, user);
-//       }).catch(function(reason) {
-//         return done(reason);
-//       });
-
-
-//     });
-//   }
-// ));
-
-
-// passport.use(new LocalStrategy(
-//   function(username, password, done) {
-//     process.nextTick(function() {
-//       User.find({
-//         username: username
-//       }, function(err, user) {
-//         if (err) {
-//           return done(err);
-//         }
-//         if (!user || user.length == 0) {
-//           return done(null, false, {
-//             message: 'Unknown user ' + username
-//           });
-//         }
-//         user = user[0];
-//         if (user.password != password) {
-//           return done(null, false, {
-//             message: 'Invalid password'
-//           });
-//         }
-//         return done(null, user);
-//       })
-//     });
-//   }
-// ));
 
 var app = express();
 var config =
@@ -120,7 +40,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(session({
   secret: 'some bad text',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  store: sessionstore.createSessionStore({
+    type: 'couchdb',
+    host: 'http://localhost', // optional
+    port: 5984, // optional
+    dbName: 'express-sessions', // optional
+    collectionName: 'sessions', // optional
+    timeout: 10000, // optional
+    username: 'couchadmin',
+    password: 'test'
+  })
 })); // session secret
 app.use(passport.initialize());
 app.use(passport.session()); // persistent login sessions

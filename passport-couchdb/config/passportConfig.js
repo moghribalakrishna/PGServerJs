@@ -15,7 +15,7 @@ module.exports = function(passport, config) {
 
     // used to serialize the user for the session
     passport.serializeUser(function(user, done) {
-        done(null, user.name);
+        done(null, user._id);
     });
 
     passport.deserializeUser(function(id, done) {
@@ -107,19 +107,16 @@ module.exports = function(passport, config) {
         function(username, password, done) {
             process.nextTick(function() {
                 couch.login(username, password).then(function(user) {
+                    if (user[0].name) {
+                        couch.findUser(user[0].name).then(function(loggedInUser) {
+                            return done(null, loggedInUser[0]);
+                        }).catch(function(reason) {
+                            return done(reason);
+                        });
+                    } else {
 
-                    // if (!user || user.length === 0) {
-                    //     return done(null, false, {
-                    //         message: 'Unknown user ' + username
-                    //     });
-                    // }
-                    // user = user[0];
-                    // if (user.password != password) {
-                    //     return done(null, false, {
-                    //         message: 'Invalid password'
-                    //     });
-                    // }
-                    return done(null, user[0]);
+                        return done(null, user[0]);
+                    }
                 }).catch(function(reason) {
                     return done(reason);
                 });

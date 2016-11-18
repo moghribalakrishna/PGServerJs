@@ -29,7 +29,11 @@ module.exports = function(config) {
 
    //var users = nano.use('_users');
    profitGuruCouch.findUser = function(userName) {
-      return users.get("org.couchdb.user:" + userName);
+      if (userName.indexOf('org.couchdb.user') >= 0) {
+         return users.get(userName);
+      } else {
+         return users.get("org.couchdb.user:" + userName);
+      }
    };
 
    profitGuruCouch.login = function(username, password) {

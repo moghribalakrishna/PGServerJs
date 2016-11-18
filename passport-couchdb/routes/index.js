@@ -21,6 +21,26 @@ module.exports = function(app, passport) {
     });
   });
 
+
+  app.get('/sessionAll', function(req, res) {
+    // res.render('index.ejs', {
+    //   user: req.user
+    // });
+    res.send({
+      message: 'User:' + JSON.stringify(req.session)
+    });
+  });
+
+  app.get('/addsessionUser', function(req, res) {
+    // res.render('index.ejs', {
+    //   user: req.user
+    // });
+    req.user.someValue = '5631732578';
+    req.session.addedValue = '123';
+    res.send({
+      message: 'User:se session' + JSON.stringify(req.session)
+    });
+  });
   app.get('/account', function(req, res) {
     res.render('account.ejs', {
       user: req.user
