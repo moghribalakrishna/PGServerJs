@@ -4,8 +4,20 @@ module.exports = function(app, passport) {
 
 
   app.get('/', function(req, res) {
-    res.render('index.ejs', {
-      user: req.user
+    // res.render('index.ejs', {
+    //   user: req.user
+    // });
+    res.send({
+      message: 'Login success'
+    });
+  });
+
+  app.get('/sessionUser', function(req, res) {
+    // res.render('index.ejs', {
+    //   user: req.user
+    // });
+    res.send({
+      message: 'User:' + JSON.stringify(req.user)
     });
   });
 
@@ -17,26 +29,31 @@ module.exports = function(app, passport) {
 
   app.get('/logout', function(req, res) {
     req.logout();
-    res.redirect('/');
-  });
-
-  app.get('/login', function(req, res) {
-    res.render('login.ejs', {
-      message: req.flash('loginMessage')
+    res.send({
+      message: 'logout success'
     });
   });
 
-  app.post('/login', passport.authenticate('local', {
+  app.get('/login', function(req, res) {
+    // res.render('login.ejs', {
+    //   message: req.flash('loginMessage')
+    // });
+    res.send({
+      message: 'Login failed'
+    });
+  });
+
+  app.post('/login', passport.authenticate('local-login', {
     successRedirect: '/',
     failureRedirect: '/login', // redirect back to the signup page if there is an error
     failureFlash: true // allow flash messages
   }));
 
-  app.get('/signup', function(req, res) {
-    res.render('signup.ejs', {
-      message: req.flash('signupMessage')
-    });
-  });
+  // app.get('/signup', function(req, res) {
+  //   res.render('signup.ejs', {
+  //     message: req.flash('signupMessage')
+  //   });
+  // });
 
   // app.post('/register', function(req, res) {
   //   console.log("/register");
@@ -54,23 +71,34 @@ module.exports = function(app, passport) {
   // });
 
   // process the signup form
-  app.post('/signup', function(req, res) {
-    // User.create(req.body.user, function(err, data) {
-    //   if (err) {
-    //     console.log('Error : ', err);
-    //     res.send(500, err);
-    //   } else {
-    //     res.redirect('/');
-    //   }
-    // });
-    couch.createUserAndItsOwnDB(req.body.user).then(function(resp) {
-      res.redirect('/');
-    }).catch(function(reason) {
-      console.log('Error : ', reason);
-      res.send(500, reason);
+  // app.post('/signup', function(req, res) {
+
+  //   couch.createUserAndItsOwnDB(req.body.user).then(function(resp) {
+  //     res.redirect('/');
+  //   }).catch(function(reason) {
+  //     console.log('Error : ', reason);
+  //     res.send(500, reason);
+  //   });
+  // });
+  app.get('/signup', function(req, res) {
+
+    // render the page and pass in any flash data if it exists
+    res.send({
+      message: 'success'
     });
   });
 
+  app.get('/profile', isLoggedIn, function(req, res) {
+    res.send({
+      'profile': req.user
+    });
+  });
+
+  app.post('/signup', passport.authenticate('local-signup', {
+    successRedirect: '/profile', // redirect to the secure profile section
+    failureRedirect: '/signup', // redirect back to the signup page if there is an error
+    failureFlash: true // allow flash messages
+  }));
 
 };
 

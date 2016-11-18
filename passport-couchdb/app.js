@@ -22,58 +22,57 @@ var env = process.env.NODE_ENV || 'development',
 var User = require('./models/user');
 
 
-passport.serializeUser(function(user, done) {
-  done(null, user._id);
-});
+// passport.serializeUser(function(user, done) {
+//   done(null, user._id);
+// });
 
-passport.deserializeUser(function(id, done) {
-  couch.findUser({
-    _id: id
-  }).then(function(user) {
-    done(null, user[0]);
-  }).catch(function(reason) {
-    done(reason, null);
-  });
+// passport.deserializeUser(function(id, done) {
+//   couch.findUser({
+//     _id: id
+//   }).then(function(user) {
+//     done(null, user[0]);
+//   }).catch(function(reason) {
+//     done(reason, null);
+//   });
+
+// passport.deserializeUser(function(id, done) {
+//   User.find({
+//     _id: id
+//   }, function(err, user) {
+//     if (err || user.length == 0)
+//       done(err, null);
+//     else
+//       done(err, user[0]);
+//   });
+//});
+
+// passport.use(new LocalStrategy(
+//   function(username, password, done) {
+//     process.nextTick(function() {
+//       couch.findUser({
+//         _id: username
+//       }).then(function(user) {
+
+//         if (!user || user.length === 0) {
+//           return done(null, false, {
+//             message: 'Unknown user ' + username
+//           });
+//         }
+//         user = user[0];
+//         if (user.password != password) {
+//           return done(null, false, {
+//             message: 'Invalid password'
+//           });
+//         }
+//         return done(null, user);
+//       }).catch(function(reason) {
+//         return done(reason);
+//       });
 
 
-  // passport.deserializeUser(function(id, done) {
-  //   User.find({
-  //     _id: id
-  //   }, function(err, user) {
-  //     if (err || user.length == 0)
-  //       done(err, null);
-  //     else
-  //       done(err, user[0]);
-  //   });
-});
-
-passport.use(new LocalStrategy(
-  function(username, password, done) {
-    process.nextTick(function() {
-      couch.findUser({
-        _id: username
-      }).then(function(user) {
-
-        if (!user || user.length === 0) {
-          return done(null, false, {
-            message: 'Unknown user ' + username
-          });
-        }
-        user = user[0];
-        if (user.password != password) {
-          return done(null, false, {
-            message: 'Invalid password'
-          });
-        }
-        return done(null, user);
-      }).catch(function(reason) {
-        return done(reason);
-      });
-
-
-    });
-  }
-));
+//     });
+//   }
+// ));
 
 
 // passport.use(new LocalStrategy(
@@ -103,7 +102,8 @@ passport.use(new LocalStrategy(
 // ));
 
 var app = express();
-
+var config =
+  require('./config/passportConfig')(passport, config);
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
@@ -159,9 +159,9 @@ app.use(function(err, req, res, next) {
   });
 });
 
-resourceful.use('couchdb', {
-  database: config.database
-});
+// resourceful.use('couchdb', {
+//   database: config.database
+// });
 
 
 module.exports = app;
