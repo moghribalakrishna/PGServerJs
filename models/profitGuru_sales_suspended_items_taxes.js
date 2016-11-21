@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_sales_suspended_items_taxes', {
+	var SuspendedSalesItemsTaxesModel = sequelize.define('profitGuru_sales_suspended_items_taxes', {
 		sale_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
@@ -36,6 +36,22 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: undefined
 		}
 	}, {
-		tableName: 'profitGuru_sales_suspended_items_taxes'
+		tableName: 'profitGuru_sales_suspended_items_taxes',
+		classMethods: {
+			associate: function(models) {
+
+				SuspendedSalesItemsTaxesModel.belongsTo(models.profitGuru_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+				SuspendedSalesItemsTaxesModel.belongsTo(models.profitGuru_sales_suspended_items, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+			}
+		}
 	});
+
+	return SuspendedSalesItemsTaxesModel;
 };

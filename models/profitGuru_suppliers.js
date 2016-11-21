@@ -1,12 +1,15 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	var suppliersTable = sequelize.define('profitGuru_suppliers', {
+	var suppliersModel = sequelize.define('profitGuru_suppliers', {
 
 		person_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
 			defaultValue: undefined,
+			primaryKey: true, // I have created this as an primary key to avoid sequlize to cteare
+			//extra id filed and also to use findById whenever needed , otherwise this woold have considered
+			//id field created by default
 			references: {
 				model: 'profitGuru_people',
 				key: 'person_id'
@@ -43,26 +46,35 @@ module.exports = function(sequelize, DataTypes) {
 		classMethods: {
 			associate: function(models) {
 
-				suppliersTable.belongsTo(models.profitGuru_items, {
+				suppliersModel.hasMany(models.profitGuru_items, {
 					foreignKey: 'supplier_id',
 					constraints: false
 				});
 
-			},
-			isPersonExistsWithThisPhoneNumber: function(phoneNumber) {
-				var defered = q.defer();
-				this.findAndCountAll({
-					where: {
-						phone_number: phoneNumber
-					}
-				}).then(function(result) {
-					defered.resolve(result.count > 0);
-				}).catch(function(reason) {
-					defered.reject(reason);
+				suppliersModel.hasMany(models.profitGuru_receivings, {
+					foreignKey: 'supplier_id',
+					constraints: false
 				});
-				return defered.promise;
+			},
+			validate: {
+				isPersonExistsWithThisPhoneNumber: function(phoneNumber) {
+					//var defered = q.defer();
+					this.findAndCountAll({
+						where: {
+							phone_number: phoneNumber
+						}
+					}).then(function(result) {
+						//defered.resolve(result.count > 0);
+						if (result.count > 0) {
+							throw new Error('Person with phoneNumber=' + phoneNumber + 'already Exists');
+						}
+					}).catch(function(reason) {
+						throw new Error(reason);
+					});
+					//return defered.promise;
+				}
 			}
 		}
 	});
-	return suppliersTable;
+	return suppliersModel;
 };

@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_employees', {
+	var EmployeesModel = sequelize.define('profitGuru_employees', {
 		// don't add the timestamp attributes (updatedAt, createdAt)
 		timestamps: false,
 
@@ -22,6 +22,7 @@ module.exports = function(sequelize, DataTypes) {
 		person_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
+			primaryKey: true,
 			defaultValue: undefined,
 			references: {
 				model: 'profitGuru_people',
@@ -34,6 +35,34 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: '0'
 		}
 	}, {
-		tableName: 'profitGuru_employees'
+		tableName: 'profitGuru_employees',
+		classMethods: {
+			associate: function(models) {
+
+				EmployeesModel.hasMany(models.profitGuru_inventory, {
+					foreignKey: 'trans_user',
+					constraints: false
+				});
+				EmployeesModel.hasMany(models.profitGuru_receivings, {
+					foreignKey: 'employee_id',
+					constraints: false
+				});
+				EmployeesModel.hasMany(models.profitGuru_sales, {
+					foreignKey: 'employee_id',
+					constraints: false
+				});
+				EmployeesModel.hasMany(models.profitGuru_sales_suspended, {
+					foreignKey: 'employee_id',
+					constraints: false
+				});
+
+				EmployeesModel.belongsTo(models.profitGuru_people, {
+					foreignKey: 'person_id',
+					constraints: true
+				});
+
+			}
+		}
 	});
+	return EmployeesModel;
 };

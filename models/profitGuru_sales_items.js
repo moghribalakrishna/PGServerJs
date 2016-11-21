@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_sales_items', {
+	var SalesItemsModel = sequelize.define('profitGuru_sales_items', {
 		sale_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
@@ -63,6 +63,47 @@ module.exports = function(sequelize, DataTypes) {
 			}
 		}
 	}, {
-		tableName: 'profitGuru_sales_items'
+		tableName: 'profitGuru_sales_items',
+		classMethods: {
+			associate: function(models) {
+
+				SalesItemsModel.belongsTo(models.profitGuru_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+				SalesItemsModel.belongsTo(models.profitGuru_stock_locations, {
+					foreignKey: 'item_location',
+					constraints: false
+				});
+
+				SalesItemsModel.belongsTo(models.profitGuru_sales, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+
+				SalesItemsModel.hasMany(models.profitGuru_sales_items_taxes, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+			},
+			getAllSaleItems: function(saleId) {
+				return new Promise(function(resolve, reject) {
+					this.findOne({
+						where: {
+							sale_id: saleId
+						}
+					}).then(function(saleItemsList) {
+						if (!saleItemsList) {
+							resolve(false);
+						} else {
+							resolve(saleItemsList[0].dataValues.sale_id);
+						}
+					});
+				});
+			}
+		}
 	});
+
+	return SalesItemsModel;
 };

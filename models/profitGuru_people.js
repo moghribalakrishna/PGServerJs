@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 var q = require('q');
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_people', {
+	var peopleModel = sequelize.define('profitGuru_people', {
 
 		first_name: {
 			type: DataTypes.STRING,
@@ -20,7 +20,8 @@ module.exports = function(sequelize, DataTypes) {
 		phone_number: {
 			type: DataTypes.STRING,
 			allowNull: false,
-			defaultValue: undefined
+			defaultValue: undefined,
+			unique: true
 		},
 		email: {
 			type: DataTypes.STRING,
@@ -77,8 +78,25 @@ module.exports = function(sequelize, DataTypes) {
 		// to the current date (when deletion was done). paranoid will only work if
 		// timestamps are enabled
 		paranoid: true,
+		//unused field
 		tableName: 'profitGuru_people',
 		classMethods: {
+			associate: function(models) {
+
+				peopleModel.hasMany(models.profitGuru_customers, {
+					foreignKey: 'person_id',
+					constraints: false
+				});
+				peopleModel.hasMany(models.profitGuru_employees, {
+					foreignKey: 'person_id',
+					constraints: false
+				});
+				peopleModel.hasMany(models.profitGuru_suppliers, {
+					foreignKey: 'person_id',
+					constraints: false
+				});
+
+			},
 			isPersonExistsWithThisPhoneNumber: function(phoneNumber) {
 				var defered = q.defer();
 				this.findAndCountAll({
@@ -94,4 +112,5 @@ module.exports = function(sequelize, DataTypes) {
 			}
 		}
 	});
+	return peopleModel;
 };

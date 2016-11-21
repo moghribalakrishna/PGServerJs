@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_discounts', {
+	var DiscountModel = sequelize.define('profitGuru_discounts', {
 		item_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
@@ -11,17 +11,32 @@ module.exports = function(sequelize, DataTypes) {
 		discount: {
 			type: 'REAL',
 			allowNull: false,
-			defaultValue: undefined
+			defaultValue: undefined,
+			validate: {
+				isDecimal: true
+			}
 		},
 		loyaltyPerc: {
 			type: 'REAL',
 			allowNull: false,
-			defaultValue: undefined
+			defaultValue: undefined,
+			validate: {
+				isDecimal: true,
+			}
 		},
-		expiry_date: {
+		discout_expiry: {
+			validate: {
+				isDate: {
+					msg: "Discount expiry_date Must be Valid Date"
+				} //,
+				// isInputIsNullString: function(value) {
+				// 	if (value === '')
+				// 		this.expiry_date = null;
+				// }
+			},
 			type: DataTypes.TIME,
-			allowNull: false,
-			defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
+			allowNull: true,
+			defaultValue: null
 		},
 		itemNprice: {
 			type: DataTypes.INTEGER(1),
@@ -29,6 +44,18 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: '0'
 		}
 	}, {
-		tableName: 'profitGuru_discounts'
+		tableName: 'profitGuru_discounts',
+		classMethods: {
+			associate: function(models) {
+
+				DiscountModel.belongsTo(models.profitGuru_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+			}
+		}
 	});
+
+	return DiscountModel;
 };

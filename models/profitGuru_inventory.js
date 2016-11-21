@@ -1,12 +1,13 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_inventory', {
+	var IneventoryModel = sequelize.define('profitGuru_inventory', {
 		trans_id: {
 			type: DataTypes.INTEGER,
 			allowNull: false,
 			defaultValue: undefined,
-			primaryKey: true
+			primaryKey: true,
+			autoIncrement: true
 		},
 		trans_items: {
 			type: DataTypes.INTEGER(11),
@@ -51,6 +52,25 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: '0'
 		}
 	}, {
-		tableName: 'profitGuru_inventory'
+		tableName: 'profitGuru_inventory',
+		classMethods: {
+			associate: function(models) {
+
+				IneventoryModel.belongsTo(models.profitGuru_items, {
+					foreignKey: 'trans_items',
+					constraints: false
+				});
+				IneventoryModel.belongsTo(models.profitGuru_inventory, {
+					foreignKey: 'trans_user',
+					constraints: false
+				});
+				IneventoryModel.belongsTo(models.profitGuru_stock_locations, {
+					foreignKey: 'trans_location',
+					constraints: false
+				});
+
+			}
+		}
 	});
+	return IneventoryModel;
 };

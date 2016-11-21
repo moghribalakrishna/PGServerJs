@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_sales_suspended_payments', {
+	var SuspendedSalesPaymentsModel = sequelize.define('profitGuru_sales_suspended_payments', {
 		sale_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
@@ -22,6 +22,17 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: undefined
 		}
 	}, {
-		tableName: 'profitGuru_sales_suspended_payments'
+		tableName: 'profitGuru_sales_suspended_payments',
+		classMethods: {
+			associate: function(models) {
+
+				SuspendedSalesPaymentsModel.belongsTo(models.profitGuru_sales_suspended, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+			}
+		}
 	});
+
+	return SuspendedSalesPaymentsModel;
 };

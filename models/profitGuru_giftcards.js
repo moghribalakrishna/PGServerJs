@@ -1,42 +1,44 @@
 /* jshint indent: 1 */
-
+//TODO Custmers now Made to own giftcards rather than persons table
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_giftcards', {
+	var giftCardsModel = sequelize.define('profitGuru_giftcards', {
 		record_time: {
 			type: DataTypes.TIME,
 			allowNull: false,
 			defaultValue: sequelize.literal('CURRENT_TIMESTAMP')
 		},
+		customer_id: {
+			type: DataTypes.INTEGER(10),
+			allowNull: true,
+			references: {
+				model: 'profitGuru_customers',
+				key: 'person_id'
+			}
+		},
 		giftcard_id: {
 			type: DataTypes.INTEGER,
-			allowNull: true,
-			defaultValue: undefined,
-			primaryKey: true
-		},
-		giftcard_number: {
-			type: DataTypes.INTEGER(10),
+			autoIncrement: true,
 			allowNull: false,
-			defaultValue: undefined
+			primaryKey: true
 		},
 		value: {
 			type: DataTypes.DECIMAL,
 			allowNull: false,
 			defaultValue: undefined
-		},
-		deleted: {
-			type: DataTypes.INTEGER(1),
-			allowNull: false,
-			defaultValue: '0'
-		},
-		person_id: {
-			type: DataTypes.INTEGER(10),
-			allowNull: true,
-			references: {
-				model: 'profitGuru_people',
-				key: 'person_id'
-			}
 		}
 	}, {
-		tableName: 'profitGuru_giftcards'
+		timestamps: true,
+		paranoid: true,
+		tableName: 'profitGuru_giftcards',
+		classMethods: {
+			associate: function(models) {
+				giftCardsModel.belongsTo(models.profitGuru_customers, {
+					foreignKey: 'customer_id',
+					constraints: true
+				});
+			}
+		}
 	});
+
+	return giftCardsModel;
 };

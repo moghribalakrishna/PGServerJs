@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_sales_suspended', {
+	var SalesSuspendedModel = sequelize.define('profitGuru_sales_suspended', {
 		sale_time: {
 			type: DataTypes.TIME,
 			allowNull: false,
@@ -40,6 +40,34 @@ module.exports = function(sequelize, DataTypes) {
 			primaryKey: true
 		}
 	}, {
-		tableName: 'profitGuru_sales_suspended'
+		tableName: 'profitGuru_sales_suspended',
+		classMethods: {
+			associate: function(models) {
+				SalesSuspendedModel.belongsTo(models.profitGuru_employees, {
+					foreignKey: 'employee_id',
+					constraints: false
+				});
+				SalesSuspendedModel.belongsTo(models.profitGuru_customers, {
+					foreignKey: 'customer_id',
+					constraints: false
+				});
+				SalesSuspendedModel.hasMany(models.profitGuru_sales_suspended_items, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+				SalesSuspendedModel.hasMany(models.profitGuru_sales_suspended_items_taxes, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+
+				SalesSuspendedModel.hasMany(models.profitGuru_sales_suspended_payments, {
+					foreignKey: 'sale_id',
+					constraints: false
+				});
+
+			}
+		}
 	});
+
+	return SalesSuspendedModel;
 };

@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_stock_locations', {
+	var StockLocation = sequelize.define('profitGuru_stock_locations', {
 		location_id: {
 			type: DataTypes.INTEGER,
 			allowNull: true,
@@ -18,6 +18,33 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: '0'
 		}
 	}, {
-		tableName: 'profitGuru_stock_locations'
+		tableName: 'profitGuru_stock_locations',
+		classMethods: {
+			associate: function(models) {
+
+				StockLocation.hasMany(models.profitGuru_inventory, {
+					foreignKey: 'trans_location',
+					constraints: false
+				});
+
+				StockLocation.hasMany(models.profitGuru_sales_items, {
+					foreignKey: 'item_location',
+					constraints: false
+				});
+
+				StockLocation.hasMany(models.profitGuru_sales_suspended_items, {
+					foreignKey: 'item_location',
+					constraints: false
+				});
+
+				StockLocation.hasMany(models.profitGuru_item_quantities, {
+					foreignKey: 'location_id',
+					constraints: false
+				});
+
+			}
+		}
 	});
+
+	return StockLocation;
 };

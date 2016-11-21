@@ -1,11 +1,13 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_items_taxes', {
+
+	var ItemTaxesModel = sequelize.define('profitGuru_items_taxes', {
 		item_id: {
 			type: DataTypes.INTEGER(10),
 			allowNull: false,
 			defaultValue: undefined,
+			primaryKey: true,
 			references: {
 				model: 'profitGuru_items',
 				key: 'item_id'
@@ -14,7 +16,8 @@ module.exports = function(sequelize, DataTypes) {
 		name: {
 			type: DataTypes.STRING,
 			allowNull: false,
-			defaultValue: undefined
+			defaultValue: undefined,
+			primaryKey: true
 		},
 		percent: {
 			type: DataTypes.DECIMAL,
@@ -22,6 +25,17 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: undefined
 		}
 	}, {
-		tableName: 'profitGuru_items_taxes'
+		tableName: 'profitGuru_items_taxes',
+		classMethods: {
+			associate: function(models) {
+				ItemTaxesModel.belongsTo(models.profitGuru_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+			}
+		}
 	});
+
+	return ItemTaxesModel;
 };

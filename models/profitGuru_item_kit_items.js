@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_item_kit_items', {
+	var ItemKitItmesModel = sequelize.define('profitGuru_item_kit_items', {
 		item_kit_id: {
 			type: DataTypes.INTEGER(11),
 			allowNull: false,
@@ -26,6 +26,21 @@ module.exports = function(sequelize, DataTypes) {
 			defaultValue: undefined
 		}
 	}, {
-		tableName: 'profitGuru_item_kit_items'
+		tableName: 'profitGuru_item_kit_items',
+		classMethods: {
+			associate: function(models) {
+				ItemKitItmesModel.belongsTo(models.profitGuru_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+				ItemKitItmesModel.belongsTo(models.profitGuru_item_kits, {
+					foreignKey: 'item_kit_id',
+					constraints: false
+				});
+
+			}
+		}
 	});
+
+	return ItemKitItmesModel;
 };

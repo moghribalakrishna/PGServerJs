@@ -1,14 +1,11 @@
 /* jshint indent: 1 */
 
-module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_items', {
-		// don't add the timestamp attributes (updatedAt, createdAt)
-		timestamps: false,
+var q = require('q');
+var merge = require('merge');
 
-		// don't delete database entries but set the newly added attribute deletedAt
-		// to the current date (when deletion was done). paranoid will only work if
-		// timestamps are enabled
-		paranoid: true,
+module.exports = function(sequelize, DataTypes) {
+	var itemsModel = sequelize.define('profitGuru_items', {
+
 		name: {
 			type: DataTypes.STRING,
 			allowNull: false,
@@ -20,16 +17,16 @@ module.exports = function(sequelize, DataTypes) {
 			allowNull: false,
 			defaultValue: undefined
 		},
-		// supplier_id: {
-		// 	type: DataTypes.INTEGER(11),
-		// 	allowNull: true,
-		// 	references: {
-		// 		model: 'profitGuru_suppliers',
-		// 		key: 'person_id',
-		// 		allowNull: true,
+		supplier_id: {
+			type: DataTypes.INTEGER(11),
+			allowNull: true,
+			references: {
+				model: 'profitGuru_suppliers',
+				key: 'person_id',
+				allowNull: true,
 
-		// 	}
-		// },
+			}
+		},
 		item_number: {
 			type: DataTypes.STRING,
 			allowNull: true
@@ -99,72 +96,82 @@ module.exports = function(sequelize, DataTypes) {
 			allowNull: false,
 			defaultValue: '0'
 		},
-		custom1: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
+		expiry_date: {
+			validate: {
+				isDate: {
+					msg: "Item expiry_date Must be Valid Date"
+				}
+			},
+			type: DataTypes.TIME,
+			allowNull: true,
+			defaultValue: null
 		},
-		custom2: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom3: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom4: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom5: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom6: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom7: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom8: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom9: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		},
-		custom10: {
-			type: DataTypes.STRING,
-			allowNull: false,
-			defaultValue: undefined
-		}
 	}, {
 		// don't add the timestamp attributes (updatedAt, createdAt)
 		timestamps: true,
-
 		// don't delete database entries but set the newly added attribute deletedAt
 		// to the current date (when deletion was done). paranoid will only work if
 		// timestamps are enabled
 		paranoid: true,
 		tableName: 'profitGuru_items',
 		classMethods: {
+			associate: function(models) {
+
+				itemsModel.belongsTo(models.profitGuru_suppliers, {
+					foreignKey: 'supplier_id',
+					constraints: false
+				});
+				itemsModel.hasMany(models.profitGuru_inventory, {
+					foreignKey: 'trans_items',
+					constraints: false
+				});
+				itemsModel.hasOne(models.profitGuru_discounts, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+				itemsModel.hasMany(models.profitGuru_item_quantities, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+				itemsModel.hasMany(models.profitGuru_items_taxes, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+				itemsModel.hasMany(models.profitGuru_item_kit_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+				// itemsModel.hasMany(models.profitGuru_stock_locations, {
+				// 	foreignKey: 'item_id',
+				// 	constraints: false
+				// });
+
+				itemsModel.hasMany(models.profitGuru_sales_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+				itemsModel.hasMany(models.profitGuru_sales_items_taxes, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+				itemsModel.hasMany(models.profitGuru_sales_suspended_items, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+				itemsModel.hasMany(models.profitGuru_sales_suspended_items_taxes, {
+					foreignKey: 'item_id',
+					constraints: false
+				});
+
+			},
 			isItemExists: function(itemNumber, itemName) {
-				if (!itemId)
-					itemId = '';
 
 				var defered = q.defer();
 				this.findAndCountAll({
+
 					where: {
 						deletedAt: {
 							$eq: null
@@ -178,7 +185,63 @@ module.exports = function(sequelize, DataTypes) {
 					defered.reject(reason);
 				});
 				return defered.promise;
+			},
+			isItemExistsByItemId: function(itemId) {
+				var _self = this;
+				return new Promise(function(resolve, reject) {
+					this.findAndCountAll({
+						where: {
+							item_id: itemId
+						}
+					}).then(function(result) {
+						if (result.count === 1) {
+							resolve(true);
+						} else if (result.count > 1) {
+							reject(' Wiered there are ' + result.count + ' Items with itemId=' + itemId);
+						} else {
+							resolve(false);
+						}
+					});
+				});
 			}
 		}
+
 	});
+
+	itemsModel.getThisItemInfo = function(itemId) {
+		var _self = this;
+		var Models = require('./index.js');
+		var result = {};
+		return new Promise(function(resolve, reject) {
+
+			_self.find({
+
+				include: [{
+					model: Models.profitGuru_suppliers,
+					attributes: ['company_name']
+				}, {
+					model: Models.profitGuru_discounts,
+					attributes: ['loyaltyPerc']
+				}, {
+					model: Models.profitGuru_item_quantities,
+					attributes: ['quantity'],
+					include: [{
+						model: Models.profitGuru_stock_locations,
+						attributes: ['location_name'],
+					}]
+				}],
+				where: {
+					item_id: itemId
+				}
+			}).then(function(thisItemInfo) {
+				// result = merge(thisItemInfo.dataValues, thisItemInfo.profitGuru_supplier.dataValues, thisItemInfo.profitGuru_discount.dataValues);
+				// delete result.dataValues;
+				// delete result.dataValues;
+				//resolve(result);
+				resolve(thisItemInfo.dataValues);
+			});
+		});
+	};
+
+	return itemsModel;
 };

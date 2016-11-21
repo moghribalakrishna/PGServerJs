@@ -1,9 +1,26 @@
 var faker = require('faker');
-
+//var chance = require('chance');
 var profitGuruFakerElementsData = function() {
 
-	// Works fine for Items
+	this.getFakerSession = function() {
+		return {
+			sale_mode: 'sale',
+			location_id: 1
+		};
+	};
+
 	this.getFakerItem = function(itemType, appType) {
+		/*	TODO changes to Items with Node BackEnd
+	
+		1) expiry is now getting added directly to items
+		2) made arrangements to add expiry to discounts
+		3) removed custom fields
+		4) renamed input field 1_quantity to quantity
+		5) created new input field location_id at the backend , user can select from the
+			available locations
+		6) Converted hardcoded taxnames and taxpercent rather to take array inputs
+		*/
+
 		var item = {};
 		if (itemType == "Prepared" && appType == "restaurant") {
 			item = {
@@ -12,26 +29,16 @@ var profitGuruFakerElementsData = function() {
 				"item_number": faker.random.number(),
 				"cost_price": faker.random.number(),
 				"unit_price": faker.random.number(),
-				"1_quantity": "",
+				"quantity": "",
 				"category": faker.lorem.word(),
 				"supplier_id": null,
 				"item_image": "",
 				"is_serialized": "0",
 				"is_deleted": "0",
 				"itemNprice": "0",
-				"expiry": "",
+				"expiry_date": "",
 				"allow_alt_description": "0",
 				"ItemType": "Prepared",
-				"custom1": 0,
-				"custom2": 0,
-				"custom3": 0,
-				"custom4": 0,
-				"custom5": 0,
-				"custom6": 0,
-				"custom7": 0,
-				"custom8": 0,
-				"custom9": 0,
-				"custom10": 0,
 				"isprepared": true,
 				"issellable": true,
 				"isbought": false
@@ -43,26 +50,16 @@ var profitGuruFakerElementsData = function() {
 				"item_number": faker.random.number(),
 				"cost_price": faker.random.number(),
 				"unit_price": faker.random.number(),
-				"1_quantity": "",
+				"quantity": "",
 				"category": faker.lorem.word(),
-				"supplier_id": "",
+				"supplier_id": null,
 				"item_image": "",
 				"is_serialized": "0",
 				"is_deleted": "0",
 				"itemNprice": "0",
-				"expiry": "",
+				"expiry_date": "",
 				"allow_alt_description": "0",
 				"ItemType": "Prepared",
-				"custom1": 0,
-				"custom2": 0,
-				"custom3": 0,
-				"custom4": 0,
-				"custom5": 0,
-				"custom6": 0,
-				"custom7": 0,
-				"custom8": 0,
-				"custom9": 0,
-				"custom10": 0,
 				"isprepared": false,
 				"issellable": false,
 				"isbought": true
@@ -74,26 +71,16 @@ var profitGuruFakerElementsData = function() {
 				"item_number": faker.random.number(),
 				"cost_price": faker.random.number(),
 				"unit_price": faker.random.number(),
-				"1_quantity": "",
+				"quantity": "",
 				"category": faker.lorem.word(),
-				"supplier_id": "",
+				"supplier_id": null,
 				"item_image": "",
 				"is_serialized": "0",
 				"is_deleted": "0",
 				"itemNprice": "0",
-				"expiry": "",
+				"expiry_date": "",
 				"allow_alt_description": "0",
 				"ItemType": "Prepared",
-				"custom1": 0,
-				"custom2": 0,
-				"custom3": 0,
-				"custom4": 0,
-				"custom5": 0,
-				"custom6": 0,
-				"custom7": 0,
-				"custom8": 0,
-				"custom9": 0,
-				"custom10": 0,
 				"isprepared": false,
 				"issellable": true,
 				"isbought": true
@@ -105,32 +92,31 @@ var profitGuruFakerElementsData = function() {
 				"item_number": faker.random.number(),
 				"cost_price": faker.random.number(),
 				"unit_price": faker.random.number(),
-				"1_quantity": "",
+				"quantity": "",
 				"category": faker.lorem.word(),
-				"supplier_id": "",
+				"supplier_id": null,
 				"item_image": "",
 				"is_serialized": "0",
 				"is_deleted": "0",
-				"itemNprice": "0",
-				"expiry": "",
+				//"itemNprice": "0",
+				//"expiry_date": "",
 				"allow_alt_description": "0",
 				"ItemType": "Prepared",
-				"custom1": 0,
-				"custom2": 0,
-				"custom3": 0,
-				"custom4": 0,
-				"custom5": 0,
-				"custom6": 0,
-				"custom7": 0,
-				"custom8": 0,
-				"custom9": 0,
-				"custom10": 0,
 				"isprepared": false,
 				"issellable": false,
 				"isbought": false
 			};
 		}
 
+		if (!item.expiry_date)
+			item.expiry_date = faker.date.future();
+
+		if (!item.discount_expiry)
+			item.discount_expiry = faker.date.future();
+
+		if (!item.itemNprice)
+			item.itemNprice = faker.random.boolean();
+		item.location_id = 1;
 		item.reorder_level = faker.random.number({
 			min: 0,
 			max: 2000
@@ -144,21 +130,38 @@ var profitGuruFakerElementsData = function() {
 			max: 10000
 		});
 		item.loyaltyPerc = faker.finance.amount(0, 10, 2);
-		item.tax_name_1 = "VAT";
-		item.tax_name_2 = "GST";
-		item.tax_percent_1 = faker.random.arrayElement([0, 5.5, 12]);
-		item.tax_percent_2 = faker.random.arrayElement([0, 6.5, 18]);
+		item.tax_names = ["VAT", "GST"];
+		item.tax_percents = [faker.random.arrayElement([0, 5.5, 12]), faker.random.arrayElement([0, 6.5, 18])];
 		item.description = faker.lorem.word();
 		item.discount = faker.finance.amount(0, 70, 2);
 
 		return item;
 	};
+
+	this.getPersonData = function() {
+		return {
+			"person_id": "",
+			"first_name": faker.name.firstName(),
+			"last_name": faker.name.lastName(),
+			"gender": faker.random.arrayElement(['M', 'F']),
+			"email": faker.internet.email(),
+			"phone_number": faker.phone.phoneNumber(),
+			"address_1": faker.address.streetName(),
+			"address_2": faker.address.streetAddress(),
+			"city": faker.address.city(),
+			"state": faker.address.state(),
+			"zip": faker.address.zipCode(),
+			"country": faker.address.country(),
+			"comments": ""
+		};
+	};
+
 	this.getFakerCustomer = function() {
 		return {
 			"person_id": "",
 			"first_name": faker.name.firstName(),
 			"last_name": faker.name.lastName(),
-			"gender": "M",
+			"gender": faker.random.arrayElement(['M', 'F']),
 			"email": faker.internet.email(),
 			"phone_number": faker.phone.phoneNumber(),
 			"address_1": faker.address.streetName(),
@@ -168,13 +171,45 @@ var profitGuruFakerElementsData = function() {
 			"zip": faker.address.zipCode(),
 			"country": faker.address.country(),
 			"comments": "",
-			"account_number": faker.random.number(), //"",
+			"account_number": (faker.random.number()).toString(), //"",
 			"company_name": faker.company.companyName(),
-			"taxable": 0,
-			"loyalty": 0
+			"taxable": faker.random.arrayElement([0, 1]),
+			"loyalty": faker.random.arrayElement([0, 1])
 		};
 	};
 
+	this.getFakerPerson = function() {
+		return {
+			"first_name": faker.name.firstName(),
+			"last_name": faker.name.lastName(),
+			"gender": faker.random.arrayElement(['M', 'F']),
+			"email": faker.internet.email(),
+			"phone_number": faker.phone.phoneNumber(),
+			"address_1": faker.address.streetName(),
+			"address_2": faker.address.streetAddress(),
+			"city": faker.address.city(),
+			"state": faker.address.state(),
+			"zip": faker.address.zipCode(),
+			"country": faker.address.country(),
+			"comments": ""
+		};
+	};
+
+	this.getFakerCustomerConfig = function() {
+		return {
+			"account_number": (faker.random.number()).toString(), //"",
+			"company_name": faker.company.companyName(),
+			"taxable": faker.random.arrayElement([0, 1]),
+			"loyalty": faker.random.arrayElement([0, 1])
+		};
+	};
+	this.getFakerStockLoaction = function() {
+		return {
+			location_id: 1,
+			location_name: faker.company.companyName()
+		};
+
+	};
 	this.getFakerEmployee = function() {
 		var firstName = faker.name.firstName();
 		return {
@@ -215,6 +250,15 @@ var profitGuruFakerElementsData = function() {
 			"country": faker.address.country(),
 			"comments": "",
 			"account_number": faker.finance.account()
+		};
+	};
+
+	this.getFakerGiftcard = function() {
+		return {
+			giftcardvalue: (faker.random.number({
+				min: 0,
+				max: 20
+			})) * 500
 		};
 	};
 
