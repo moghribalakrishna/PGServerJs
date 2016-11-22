@@ -1,7 +1,7 @@
 /* jshint indent: 1 */
 
 module.exports = function(sequelize, DataTypes) {
-	return sequelize.define('profitGuru_receivings', {
+	var ReceivingsModel = sequelize.define('profitGuru_receivings', {
 
 		receiving_time: {
 			type: DataTypes.TIME,
@@ -52,6 +52,22 @@ module.exports = function(sequelize, DataTypes) {
 		// to the current date (when deletion was done). paranoid will only work if
 		// timestamps are enabled
 		paranoid: true,
-		tableName: 'profitGuru_receivings'
+		tableName: 'profitGuru_receivings',
+		classMethods: {
+			associate: function(models) {
+
+				ReceivingsModel.belongsTo(models.profitGuru_suppliers, {
+					foreignKey: 'supplier_id',
+					constraints: false
+				});
+
+				ReceivingsModel.belongsTo(models.profitGuru_employees, {
+					foreignKey: 'employee_id',
+					constraints: false
+				});
+			}
+		}
 	});
+
+	return ReceivingsModel;
 };
