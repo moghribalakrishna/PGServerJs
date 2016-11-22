@@ -25,7 +25,6 @@ module.exports = function(session) {
         return session.cart;
     };
 
-
     salesControllerLib.set_cart = function(salesCartData) {
         session.cart = salesCartData;
     };
@@ -123,40 +122,51 @@ module.exports = function(session) {
     };
 
     salesControllerLib.get_subtotal = function(include_discount, exclude_tax) {
-        if (typeof include_discount == 'undefined') include_discount = false;
-        if (typeof exclude_tax == 'undefined') exclude_tax = false;
+        include_discount = include_discount || false;
+        exclude_tax = exclude_tax || false;
         var subtotal = this.calculate_subtotal(include_discount, exclude_tax);
         return to_currency_no_money(subtotal);
     };
 
+    salesControllerLib.get_item_tax = function(quantity, price, discount_percentage, tax_percentage) {
+        price = this.get_item_total(quantity, price, discount_percentage, true);
+        //TODO get this from settings, as of now considering true
+        //if (this.CI.config.config['tax_included']) {
+        var tax_fraction;
+        var price_tax_excl;
+        if (true) {
+            tax_fraction = math.add(100, tax_percentage);
+            tax_fraction = math.divide(tax_fraction, 100);
+            price_tax_excl = math.divide(price, tax_fraction);
+            return math.substract(price, price_tax_excl);
+        }
+        tax_fraction = math.divide(tax_percentage, 100);
+        return math.multiply(price, tax_fraction);
+    };
     salesControllerLib.get_item_total_tax_exclusive = function(item_id, quantity, price, discount_percentage, include_discount) {
-        if (typeof include_discount == 'undefined') include_discount = false;
+        include_discount = include_discount || false;
 
         var tax_info = this.CI.Item_taxes.get_info(item_id);
-        var item_price;
-        item_price = this.get_item_total(quantity, price, discount_percentage, include_discount);
+        var item_price = this.get_item_total(quantity, price, discount_percentage, include_discount);
         // only additive tax here
-        var _key_;
-        for (_key_ in tax_info) {
-            var tax;
-            tax = tax_info[_key_];
-            var tax_percentage;
-            tax_percentage = tax['percent'];
-            item_price = bcsub(item_price, this.get_item_tax(quantity, price, discount_percentage, tax_percentage), PRECISION);
+        for (var index in tax_info) {
+            var tax = tax_info[index];
+            var tax_percentage = tax['percent'];
+            item_price = math.substract(item_price, this.get_item_tax(quantity, price, discount_percentage, tax_percentage));
         }
         return item_price;
     };
 
     salesControllerLib.calculate_subtotal = function(include_discount, exclude_tax) {
-        if (typeof include_discount == 'undefined') include_discount = false;
-        if (typeof exclude_tax == 'undefined') exclude_tax = false;
+        include_discount = include_discount || false;
+        exclude_tax = exclude_tax || false;
 
         var subtotal = 0;
-        var _key_;
-        for (_key_ in this.get_cart()) {
-            var item;
-            item = this.get_cart()[_key_];
-            if (exclude_tax && this.CI.config.config['tax_included']) {
+        for (var index in session.cart) {
+            var item = session.cart[index];
+            //TODO get this from settings, as of now considering true
+            //if (exclude_tax && this.CI.config.config['tax_included']) {
+            if (exclude_tax && true) {
                 subtotal = bcadd(subtotal, this.get_item_total_tax_exclusive(item['item_id'], item['quantity'], item['price'], item['discount'], include_discount), PRECISION);
             } else {
                 subtotal = bcadd(subtotal, this.get_item_total(item['quantity'], item['price'], item['discount'], include_discount), PRECISION);
@@ -166,12 +176,12 @@ module.exports = function(session) {
     };
 
     salesControllerLib.addItemToCart = function(item_id, quantity, itemLocation, discount, price, description, serialnumber) {
-        if (typeof quantity == 'undefined') quantity = 1;
-        if (typeof discount == 'undefined') discount = 0;
-        if (typeof price == 'undefined') price = null;
-        if (typeof description == 'undefined') description = null;
-        if (typeof serialnumber == 'undefined') serialnumber = null;
-
+        quantity = quantity || 1;
+        discount = discount || 0;
+        price = price || null;
+        description = description || null;
+        serialnumber = serialnumber || null;
+        this.addingItemInfo = {};
         return new Promise(function(resolve, reject) {
 
             //make sure item exists
@@ -179,6 +189,7 @@ module.exports = function(session) {
                 if (isExists) {
 
                     return ItemsModel.getThisItemInfo(item_id).then(function(thisItemInfo) {
+                        salesControllerLib.addingItemInfo = thisItemInfo;
 
                         var salesCart = salesControllerLib.get_cart();
                         var maxkey = 0;
@@ -207,7 +218,6 @@ module.exports = function(session) {
                                 }
                             }
                         }
-
 
                         insertkey = maxkey + 1;
                         //array/cart records are identified by $insertkey and item_id is just another field.
@@ -251,7 +261,6 @@ module.exports = function(session) {
                         }
                         salesControllerLib.set_cart(salesCart);
                         return true;
-
 
                     });
 
@@ -656,22 +665,6 @@ module.exports = function(session) {
     //         }
     //     }
     //     return discount;
-    // };
-
-
-
-    // this.get_item_tax = function(quantity, price, discount_percentage, tax_percentage) {
-    //     price = this.get_item_total(quantity, price, discount_percentage, true);
-    //     if (this.CI.config.config['tax_included']) {
-    //         var tax_fraction;
-    //         tax_fraction = bcadd(100, tax_percentage, PRECISION);
-    //         tax_fraction = bcdiv(tax_fraction, 100, PRECISION);
-    //         var price_tax_excl;
-    //         price_tax_excl = bcdiv(price, tax_fraction, PRECISION);
-    //         return bcsub(price, price_tax_excl, PRECISION);
-    //     }
-    //     tax_fraction = bcdiv(tax_percentage, 100, PRECISION);
-    //     return bcmul(price, tax_fraction, PRECISION);
     // };
 
     // this.get_total = function() {

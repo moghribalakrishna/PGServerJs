@@ -47,6 +47,7 @@ module.exports = function(sequelize, DataTypes) {
 			associate: function(models) {
 
 				suppliersModel.hasMany(models.profitGuru_items, {
+					as: 'Supplier',
 					foreignKey: 'supplier_id',
 					constraints: false
 				});

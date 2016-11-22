@@ -119,21 +119,26 @@ module.exports = function(sequelize, DataTypes) {
 
 				itemsModel.belongsTo(models.profitGuru_suppliers, {
 					foreignKey: 'supplier_id',
+					as: 'Supplier',
 					constraints: false
 				});
 				itemsModel.hasMany(models.profitGuru_inventory, {
+					//	as: 'inventories',
 					foreignKey: 'trans_items',
 					constraints: false
 				});
 				itemsModel.hasOne(models.profitGuru_discounts, {
+					as: 'Discounts',
 					foreignKey: 'item_id',
 					constraints: false
 				});
-				itemsModel.hasMany(models.profitGuru_item_quantities, {
+				itemsModel.hasOne(models.profitGuru_item_quantities, {
+					as: 'Quantity',
 					foreignKey: 'item_id',
 					constraints: false
 				});
 				itemsModel.hasMany(models.profitGuru_items_taxes, {
+					as: 'taxes',
 					foreignKey: 'item_id',
 					constraints: false
 				});
@@ -142,11 +147,10 @@ module.exports = function(sequelize, DataTypes) {
 					constraints: false
 				});
 
-				// itemsModel.hasMany(models.profitGuru_stock_locations, {
+				// itemsModel.hasOne(models.profitGuru_stock_locations, {
 				// 	foreignKey: 'item_id',
 				// 	constraints: false
 				// });
-
 				itemsModel.hasMany(models.profitGuru_sales_items, {
 					foreignKey: 'item_id',
 					constraints: false
@@ -218,15 +222,19 @@ module.exports = function(sequelize, DataTypes) {
 
 				include: [{
 					model: Models.profitGuru_suppliers,
-					attributes: ['company_name']
+					as: 'Supplier',
+					attributes: ['company_name', 'account_number', 'agency_name']
 				}, {
 					model: Models.profitGuru_discounts,
-					attributes: ['loyaltyPerc']
+					as: 'Discounts',
+					attributes: ['discount', 'loyaltyPerc', 'discout_expiry', 'itemNprice', ]
 				}, {
 					model: Models.profitGuru_item_quantities,
+					as: 'Quantity',
 					attributes: ['quantity'],
 					include: [{
 						model: Models.profitGuru_stock_locations,
+						as: 'StockLocation',
 						attributes: ['location_name'],
 					}]
 				}],
@@ -234,11 +242,14 @@ module.exports = function(sequelize, DataTypes) {
 					item_id: itemId
 				}
 			}).then(function(thisItemInfo) {
+				//var itemsCompeleteInfo = {};
 				// result = merge(thisItemInfo.dataValues, thisItemInfo.profitGuru_supplier.dataValues, thisItemInfo.profitGuru_discount.dataValues);
 				// delete result.dataValues;
 				// delete result.dataValues;
 				//resolve(result);
-				resolve(thisItemInfo.dataValues);
+				resolve(thisItemInfo.get({
+					plain: true
+				}));
 			});
 		});
 	};

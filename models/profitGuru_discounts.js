@@ -49,6 +49,7 @@ module.exports = function(sequelize, DataTypes) {
 			associate: function(models) {
 
 				DiscountModel.belongsTo(models.profitGuru_items, {
+					as: 'Discounts',
 					foreignKey: 'item_id',
 					constraints: false
 				});

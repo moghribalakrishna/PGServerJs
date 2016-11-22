@@ -205,7 +205,6 @@ describe('Item Controller UTS', function() {
 
   });
 
-
   it.only('Get All Item Info from Associations', function() {
     var anItem = profitGuruFaker.getFakerItem();
 
@@ -225,19 +224,31 @@ describe('Item Controller UTS', function() {
 
           return ItemModel.getThisItemInfo(createdItem.item_id);
         }).then(function(ItemsCompleteInfo) {
-          expect(ItemsCompleteInfo).to.not.be.null;
-          //expect(ItemsCompleteInfo.item_id).to.not.be.null;
+          var oneObject = {};
+          var extend = require('extend');
           console.log(ItemsCompleteInfo);
+          // extend(true, oneObject, ItemsCompleteInfo, ItemsCompleteInfo.profitGuru_supplier, ItemsCompleteInfo.profitGuru_discount, ItemsCompleteInfo.profitGuru_item_quantities);
+          // delete oneObject.profitGuru_supplier;
+          // delete oneObject.profitGuru_discount;
+          // delete oneObject.profitGuru_item_quantities;
+          // console.log(oneObject);
+
+          // console.log(JSON.stringify(ItemsCompleteInfo));
+          // console.log(ItemsCompleteInfo.get({
+          //   plain: true
+          // }));
+          // expect(ItemsCompleteInfo).to.not.be.null;
+          //expect(ItemsCompleteInfo.item_id).to.not.be.null;
+
           // //This has the belongs to relationShip so, its not array
           // expect(ItemsCompleteInfo.profitGuru_supplier.dataValues).to.not.be.null;
 
           // expect(ItemsCompleteInfo.profitGuru_inventories.length).to.equal(1);
           // expect(ItemsCompleteInfo.profitGuru_item_quantities.length).to.equal(1);
           // expect(ItemsCompleteInfo.profitGuru_discounts.length).to.equal(1);
-          console.log('thisItemInfo.profitGuru_discount.discount', ItemsCompleteInfo.profitGuru_discount.dataValues.discount);
-          console.log('thisItemInfo.profitGuru_item_quantities.profitGuru_stock_location.item_location', ItemsCompleteInfo.profitGuru_item_quantities[0].dataValues.profitGuru_stock_location.dataValues.location_name)
-          console.log('thisItemInfo.profitGuru_item_quantities.quantity', ItemsCompleteInfo.profitGuru_item_quantities[0].dataValues.quantity);
-
+          // console.log('thisItemInfo.profitGuru_discount.discount', ItemsCompleteInfo.profitGuru_discount.dataValues.discount);
+          // console.log('thisItemInfo.profitGuru_item_quantities.profitGuru_stock_location.item_location', ItemsCompleteInfo.profitGuru_item_quantities[0].dataValues.profitGuru_stock_location.dataValues.location_name)
+          // console.log('thisItemInfo.profitGuru_item_quantities.quantity', ItemsCompleteInfo.profitGuru_item_quantities[0].dataValues.quantity);
 
         });
 

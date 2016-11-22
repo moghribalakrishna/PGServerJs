@@ -1,9 +1,10 @@
 /*jshint sub:true*/
 
-module.exports = function(salesControllerLib) {
-    var salesController = {};
-    //var salesControllerLib = require('./libraries/salesLib.js');
+module.exports = function(requestSession) {
 
+    var salesController = {};
+    //var salesControllerLib = new salesControllerLib(requestSession);
+    var salesControllerLib = require('./libraries/salesControllerLib')(requestSession);
     salesController.addItem = function(requestData) {
         return new Promise(function(resolve, reject) {
 
@@ -39,25 +40,27 @@ module.exports = function(salesControllerLib) {
         });
     };
 
-    function _reload4RestApi(data) {
-        if (typeof data == 'undefined')
-            data = {};
-
+    salesController._reload4RestApi = function(data) {
+        data = data || {};
         //TODO
         //var person_info = this.Employee.get_logged_in_employee_info();
         var loggedInEmployeeId = 1;
         data['cart'] = salesControllerLib.get_cart();
         data['modes'] = {
-            'sale': this.lang.line('sales_sale'),
-            'return': this.lang.line('sales_return')
+            sale: 'sale',
+            return: 'return'
         };
-        data['mode'] = salesControllerLib.get_mode();
-        data['stock_locations'] = this.Stock_location.get_allowed_locations('sales');
-        data['stock_location'] = salesControllerLib.get_sale_location();
+        data['mode'] = salesControllerLib.session.mode;
+        //TODO looks this is not needed at client side
+        //data['stock_locations'] = this.Stock_location.get_allowed_locations('sales');
+        data['stock_location'] = salesControllerLib.session.location_id;
         data['subtotal'] = salesControllerLib.get_subtotal(true);
         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-        //$data['taxes'] = $this->sale_lib->get_taxes();
-        data['taxesArray'] = this.getAllCartItemTaxes();
+
+        //Todo we should use taxes filed only, not taxArray
+        $data['taxes'] = salesControllerLib.get_taxes();
+
+        //data['taxesArray'] = this.getAllCartItemTaxes();
         data['discount'] = salesControllerLib.get_discount();
         data['total'] = salesControllerLib.get_total();
         data['items_module_allowed'] = this.Employee.has_grant('items', loggedInEmployeeId);
@@ -66,20 +69,21 @@ module.exports = function(salesControllerLib) {
         data['payments_total'] = salesControllerLib.get_payments_total();
         data['amount_due'] = salesControllerLib.get_amount_due();
         data['payments'] = salesControllerLib.get_payments();
-        data['payment_options'] = {
-            this.lang.line('sales_cash'): this.lang.line('sales_cash'),
-            this.lang.line('sales_check'): this.lang.line('sales_check'),
-            this.lang.line('sales_debit'): this.lang.line('sales_debit'),
-            this.lang.line('sales_credit'): this.lang.line('sales_credit')
-        };
-        var customer_id;
-        customer_id = salesControllerLib.get_customer();
-        var cust_info;
-        cust_info = '';
+        data['payment_options'] = {};
+        //TODO might have to create new table with payment options and its names
+        // data['payment_options'] = {
+        //     this.lang.line('sales_cash'): this.lang.line('sales_cash'),
+        //     this.lang.line('sales_check'): this.lang.line('sales_check'),
+        //     this.lang.line('sales_debit'): this.lang.line('sales_debit'),
+        //     this.lang.line('sales_credit'): this.lang.line('sales_credit')
+        // };
+
+        var customer_id = salesControllerLib.get_customer();
+
+        var cust_info = '';
         if (customer_id != -1) {
             cust_info = this.Customer.get_info(customer_id);
-            data['customer'] = cust_info.first_name.
-            ' '.cust_info.last_name;
+            data['customer'] = cust_info.first_name + ' ' + cust_info.last_name;
             data['customer_email'] = cust_info.email;
             data['customer_id'] = salesControllerLib.get_customer();
             data['loyalityeligible'] = cust_info.loyalty;
@@ -88,13 +92,8 @@ module.exports = function(salesControllerLib) {
         data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
         data['print_after_sale'] = salesControllerLib.is_print_after_sale();
         data['payments_cover_total'] = this._payments_cover_total();
-        //$this->load->view("sales/register",$data);
-        console.log(json_encode({
-            'data': data
-        }));
-        //TODO BK add this back
-        //$this->_remove_duplicate_cookies();
-    }
+
+    };
 
     //      function add_paymentRestApi() {
     //         var data;
@@ -1695,8 +1694,6 @@ module.exports = function(salesControllerLib) {
     //     //  echo json_encode(array("taxAmount"=>$taxArray));
     //     return taxArray;
     // }
-
-
 
     // function _reload4Homedelivery(data, customer_id) {
     //     if (typeof data == 'undefined') data = {};

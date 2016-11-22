@@ -2,39 +2,29 @@ var User = require('../models/user');
 var couch = require('../config/couch.js');
 module.exports = function(app, passport) {
 
-
   app.get('/', function(req, res) {
-    // res.render('index.ejs', {
-    //   user: req.user
-    // });
+
     res.send({
       message: 'Login success'
     });
   });
 
   app.get('/sessionUser', function(req, res) {
-    // res.render('index.ejs', {
-    //   user: req.user
-    // });
+
     res.send({
       message: 'User:' + JSON.stringify(req.user)
     });
   });
 
-
   app.get('/sessionAll', function(req, res) {
-    // res.render('index.ejs', {
-    //   user: req.user
-    // });
+
     res.send({
       message: 'User:' + JSON.stringify(req.session)
     });
   });
 
   app.get('/addsessionUser', function(req, res) {
-    // res.render('index.ejs', {
-    //   user: req.user
-    // });
+
     req.user.someValue = '5631732578';
     req.session.addedValue = '123';
     res.send({
@@ -55,9 +45,7 @@ module.exports = function(app, passport) {
   });
 
   app.get('/login', function(req, res) {
-    // res.render('login.ejs', {
-    //   message: req.flash('loginMessage')
-    // });
+
     res.send({
       message: 'Login failed'
     });
@@ -69,37 +57,6 @@ module.exports = function(app, passport) {
     failureFlash: true // allow flash messages
   }));
 
-  // app.get('/signup', function(req, res) {
-  //   res.render('signup.ejs', {
-  //     message: req.flash('signupMessage')
-  //   });
-  // });
-
-  // app.post('/register', function(req, res) {
-  //   console.log("/register");
-
-  //   couch.createUserDB(config, req.body, function(err, db) {
-  //     if (err) {
-  //       console.log(err);
-  //       res.json(err);
-  //     } else {
-  //       console.log(db);
-  //       res.json(db);
-  //     }
-
-  //   });
-  // });
-
-  // process the signup form
-  // app.post('/signup', function(req, res) {
-
-  //   couch.createUserAndItsOwnDB(req.body.user).then(function(resp) {
-  //     res.redirect('/');
-  //   }).catch(function(reason) {
-  //     console.log('Error : ', reason);
-  //     res.send(500, reason);
-  //   });
-  // });
   app.get('/signup', function(req, res) {
 
     // render the page and pass in any flash data if it exists

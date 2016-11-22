@@ -57,6 +57,7 @@ module.exports = function(sequelize, DataTypes) {
 			associate: function(models) {
 
 				IneventoryModel.belongsTo(models.profitGuru_items, {
+					as: 'inventories',
 					foreignKey: 'trans_items',
 					constraints: false
 				});

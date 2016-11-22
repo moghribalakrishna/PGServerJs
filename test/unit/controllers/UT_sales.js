@@ -64,8 +64,8 @@ describe('Sales Controller UTS', function() {
 
   it('add Item to Cart', function() {
 
-    salesControllerLib = new salesControllerLib(profitGuruFaker.getFakerSession());
-    salesController = new salesController(salesControllerLib);
+    // salesControllerLib = new salesControllerLib(profitGuruFaker.getFakerSession());
+    salesController = new salesController(profitGuruFaker.getFakerSession());
 
     console.log('Adding ItemId=', itemList[0].dataValues.item_id)
     salesController.addItem({

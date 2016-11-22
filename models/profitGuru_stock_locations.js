@@ -37,7 +37,8 @@ module.exports = function(sequelize, DataTypes) {
 					constraints: false
 				});
 
-				StockLocation.hasMany(models.profitGuru_item_quantities, {
+				StockLocation.hasOne(models.profitGuru_item_quantities, {
+					as: 'StockLocation',
 					foreignKey: 'location_id',
 					constraints: false
 				});
