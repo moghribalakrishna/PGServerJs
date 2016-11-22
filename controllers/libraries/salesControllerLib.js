@@ -4,7 +4,11 @@ var ItemsModel = Models.profitGuru_items;
 var ItemKitsModel = Models.profitGuru_item_kits;
 var salesModel = Models.profitGuru_sales;
 var salesItemsModel = Models.profitGuru_sales_items;
+var customerModel = Models.profitGuru_customers;
+var ItemTaxsModel = Models.profitGuru_items_taxes;
+
 var math = require('mathjs');
+
 module.exports = function(session) {
     var salesControllerLib = {};
 
@@ -91,9 +95,6 @@ module.exports = function(session) {
         session.cart = [];
     };
 
-    salesControllerLib.removeCustomer = function() {
-        delete session.customer;
-    };
 
     salesControllerLib.get_item_total = function(quantity, price, discount_percentage, include_discount) {
         if (typeof include_discount == 'undefined') {
@@ -143,6 +144,7 @@ module.exports = function(session) {
         tax_fraction = math.divide(tax_percentage, 100);
         return math.multiply(price, tax_fraction);
     };
+
     salesControllerLib.get_item_total_tax_exclusive = function(item_id, quantity, price, discount_percentage, include_discount) {
         include_discount = include_discount || false;
 
@@ -175,94 +177,197 @@ module.exports = function(session) {
         return subtotal;
     };
 
+    salesControllerLib.removeCustomer = function() {
+        delete session.customer;
+    };
+
+    salesControllerLib.set_customer = function(customer_id) {
+        session.customer = customer_id;
+    };
+
+    salesControllerLib.get_customer = function() {
+        if (!session.customer) {
+            session.customer = -1;
+        }
+        return session.customer;
+    };
+
+    salesControllerLib.is_customer_taxable = function() {
+        return new Promise(function(resolve, reject) {
+            if (session.customer) {
+                customerModel.findById(session.customer).then(function(customer4Cart) {
+                    if (customer4Cart) {
+                        customer4Cart = customer4Cart.get({
+                            plain: true
+                        });
+                        resolve(customer4Cart.taxable);
+                    } else {
+                        resolve(true);
+                    }
+
+                });
+            } else {
+                resolve(true);
+            }
+        });
+    };
+
+    salesControllerLib.get_taxes = function() {
+
+        salesControllerLib.taxes = {};
+        salesControllerLib.is_customer_taxable().then(function(isCustomerTaxable) {
+            if (!isCustomerTaxable) {
+                return taxes;
+            } else {
+                var allItemsTaxInfoPromises = session.cart.map(function(currentCartItem) {
+                    return new Promise(function(resolve, reject) {
+                        return ItemTaxsModel.findById(currentCartItem.item_id).then(function(thisItemTaxInfo) {
+                            resolve({
+                                item: currentCartItem,
+                                itemTaxInfo: thisItemTaxInfo.get({
+                                    plain: true
+                                })
+                            });
+
+                        });
+                    });
+                });
+
+                return Promise.each(allItemsTaxInfoPromises, function(cartItemWithTaxInfo) {
+
+                    cartItemWithTaxInfo.itemTaxInfo.map(function(thisTax, index) {
+                        var taxName = thisTax.percent + '% ' + thisTax.name;
+                        var tax_amount = salesControllerLib.get_item_tax(cartItemWithTaxInfo[index].item.quantity, cartItemWithTaxInfo[index].item.price, cartItemWithTaxInfo[index].item.discount, thisTax.percent);
+                        if (!salesControllerLib.taxes.taxName) {
+                            salesControllerLib.taxes.taxName = 0;
+                        }
+                        salesControllerLib.taxes[taxName] = math.add(salesControllerLib.taxes[taxName], tax_amount);
+
+                    });
+                });
+            }
+
+        });
+
+
+
+        //Do not charge sales tax if we have a customer that is not taxable
+
+        // if (!this.is_customer_taxable()) {
+        //     return {};
+        // }
+        // var taxes = {};
+
+        // for (var line in this.get_cart()) {
+
+        //     var item = this.get_cart()[line];
+        //     var tax_info = this.CI.Item_taxes.get_info(item['item_id']);
+        //     var _key_;
+        //     for (_key_ in tax_info) {
+
+        //         var tax = tax_info[_key_];
+        //         var name = tax['percent'] + '% ' + tax['name'];
+        //         var tax_percentage = tax['percent'];
+        //         var tax_amount = this.get_item_tax(item['quantity'], item['price'], item['discount'], tax_percentage);
+
+        //         if (!isset(taxes[name])) {
+        //             taxes[name] = 0;
+        //         }
+
+        //         taxes[name] = bcadd(taxes[name], tax_amount, PRECISION);
+        //     }
+        // }
+        // return taxes;
+    };
+
     salesControllerLib.addItemToCart = function(item_id, quantity, itemLocation, discount, price, description, serialnumber) {
         quantity = quantity || 1;
         discount = discount || 0;
         price = price || null;
         description = description || null;
         serialnumber = serialnumber || null;
-        this.addingItemInfo = {};
+        this.add2CartItemInfo = {};
+
         return new Promise(function(resolve, reject) {
 
             //make sure item exists
-            return ItemsModel.isItemExistsByItemId(item_id).then(function(isExists) {
-                if (isExists) {
+            return ItemsModel.getThisItemInfo(item_id).then(function(thisItemInfo) {
 
-                    return ItemsModel.getThisItemInfo(item_id).then(function(thisItemInfo) {
-                        salesControllerLib.addingItemInfo = thisItemInfo;
+                if (thisItemInfo) {
+                    salesControllerLib.add2CartItemInfo = thisItemInfo;
 
-                        var salesCart = salesControllerLib.get_cart();
-                        var maxkey = 0;
+                    var salesCart = salesControllerLib.get_cart();
+                    var maxkey = 0;
 
-                        var itemalreadyinsale = false;
-                        //We did not find the item yet.
-                        var insertkey = 0;
-                        //Key to use for new entry.
-                        var updatekey = 0;
-                        //Key to use to update(quantity)
-                        var discount = thisItemInfo.profitGuru_discount.dataValues.discount;
+                    var itemalreadyinsale = false;
+                    //We did not find the item yet.
+                    var insertkey = 0;
+                    //Key to use for new entry.
+                    var updatekey = 0;
+                    //Key to use to update(quantity)
+                    var discount = thisItemInfo.profitGuru_discount.dataValues.discount;
 
-                        for (var index in salesCart) {
+                    for (var index in salesCart) {
 
-                            var cartItem = salesCart[index];
-                            //We primed the loop so maxkey is 0 the first time.
-                            //Also, we have stored the key in the element itself so we can compare.
-                            if (maxkey <= cartItem['line']) {
-                                maxkey = cartItem['line'];
-                            }
-                            if (cartItem['item_id'] == item_id && cartItem['item_location'] == itemLocation) {
-                                itemalreadyinsale = true;
-                                updatekey = cartItem['line'];
-                                if (!thisItemInfo.is_serialized) {
-                                    quantity += salesCart[updatekey]['quantity'];
-                                }
+                        var cartItem = salesCart[index];
+                        //We primed the loop so maxkey is 0 the first time.
+                        //Also, we have stored the key in the element itself so we can compare.
+                        if (maxkey <= cartItem['line']) {
+                            maxkey = cartItem['line'];
+                        }
+                        if (cartItem['item_id'] == item_id && cartItem['item_location'] == itemLocation) {
+                            itemalreadyinsale = true;
+                            updatekey = cartItem['line'];
+                            if (!thisItemInfo.is_serialized) {
+                                quantity += salesCart[updatekey]['quantity'];
                             }
                         }
+                    }
 
-                        insertkey = maxkey + 1;
-                        //array/cart records are identified by $insertkey and item_id is just another field.
-                        price = price !== null ? price : thisItemInfo.unit_price;
+                    insertkey = maxkey + 1;
+                    //array/cart records are identified by $insertkey and item_id is just another field.
+                    price = price !== null ? price : thisItemInfo.unit_price;
 
-                        var total = salesControllerLib.getItemTotal(quantity, price, discount);
+                    var total = salesControllerLib.getItemTotal(quantity, price, discount);
 
-                        var discounted_total = salesControllerLib.getItemDisCountedTotal(quantity, price, discount);
+                    var discounted_total = salesControllerLib.getItemDisCountedTotal(quantity, price, discount);
 
-                        //Item already exists and is not serialized, add to quantity
-                        if (!itemalreadyinsale || thisItemInfo.is_serialized) {
-                            var item = {
-                                insertkey: {
-                                    'item_id': item_id,
-                                    'item_location': item_location,
-                                    'stock_name': thisItemInfo.profitGuru_item_quantities[0].dataValues.profitGuru_stock_location.dataValues.location_name,
-                                    'line': insertkey,
-                                    'name': thisItemInfo.name,
-                                    'item_number': thisItemInfo.item_number,
-                                    'description': description !== null ? description : thisItemInfo.description,
-                                    'serialnumber': serialnumber !== null ? serialnumber : '',
-                                    'allow_alt_description': thisItemInfo.allow_alt_description,
-                                    'is_serialized': thisItemInfo.is_serialized,
-                                    'quantity': quantity,
-                                    'discount': discount,
-                                    'in_stock': thisItemInfo.profitGuru_item_quantities[0].dataValues.quantity,
-                                    'price': price,
-                                    'total': total,
-                                    'discounted_total': discounted_total,
-                                    'discounted_price': salesControllerLib.getItemDiscount(quantity, price, discount),
-                                    'loyaltyPerc': thisItemInfo.loyaltyPerc
-                                }
-                            };
-                            //add to existing array
-                            salesCart.push(item);
-                        } else {
+                    //Item already exists and is not serialized, add to quantity
+                    if (!itemalreadyinsale || thisItemInfo.is_serialized) {
+                        var item = {
+                            insertkey: {
+                                'item_id': item_id,
+                                'item_location': item_location,
+                                'stock_name': thisItemInfo.profitGuru_item_quantities[0].dataValues.profitGuru_stock_location.dataValues.location_name,
+                                'line': insertkey,
+                                'name': thisItemInfo.name,
+                                'item_number': thisItemInfo.item_number,
+                                'description': description !== null ? description : thisItemInfo.description,
+                                'serialnumber': serialnumber !== null ? serialnumber : '',
+                                'allow_alt_description': thisItemInfo.allow_alt_description,
+                                'is_serialized': thisItemInfo.is_serialized,
+                                'quantity': quantity,
+                                'discount': discount,
+                                'in_stock': thisItemInfo.profitGuru_item_quantities[0].dataValues.quantity,
+                                'price': price,
+                                'total': total,
+                                'discounted_total': discounted_total,
+                                'discounted_price': salesControllerLib.getItemDiscount(quantity, price, discount),
+                                'loyaltyPerc': thisItemInfo.loyaltyPerc
+                            }
+                        };
+                        //add to existing array
+                        salesCart.push(item);
+                    } else {
 
-                            salesCart[updatekey]['quantity'] = quantity;
-                            salesCart[updatekey]['total'] = total;
-                            salesCart[updatekey]['discounted_total'] = discounted_total;
-                        }
-                        salesControllerLib.set_cart(salesCart);
-                        return true;
+                        salesCart[updatekey]['quantity'] = quantity;
+                        salesCart[updatekey]['total'] = total;
+                        salesCart[updatekey]['discounted_total'] = discounted_total;
+                    }
+                    salesControllerLib.set_cart(salesCart);
+                    return true;
 
-                    });
+                    //});
 
                 } else {
                     reject(' Item with ItemId=' + item_id + ' Doesnot Exists, so Cannot add to Cart');
@@ -387,15 +492,7 @@ module.exports = function(session) {
     //     amount_due = to_currency_no_money(bcsub(sales_total, payment_total, PRECISION));
     //     return amount_due;
     // };
-    // this.get_customer = function() {
-    //     if (!this.CI.session.userdata('customer')) {
-    //         this.set_customer(-1);
-    //     }
-    //     return this.CI.session.userdata('customer');
-    // };
-    // this.set_customer = function(customer_id) {
-    //     this.CI.session.set_userdata('customer', customer_id);
-    // };
+
 
     // this.set_sale_location = function(location) {
     //     this.CI.session.set_userdata('sale_location', location);
@@ -611,46 +708,8 @@ module.exports = function(session) {
     //     this.empty_payments();
     //     this.removeCustomer();
     // };
-    // this.is_customer_taxable = function() {
-    //     var customer_id;
-    //     customer_id = this.get_customer();
-    //     var customer;
-    //     customer = this.CI.Customer.get_info(customer_id);
-    //     //Do not charge sales tax if we have a customer that is not taxable
-    //     return customer.taxable || customer_id == -1;
-    // };
-    // this.get_taxes = function() {
-    //     //Do not charge sales tax if we have a customer that is not taxable
-    //     if (!this.is_customer_taxable()) {
-    //         return {};
-    //     }
-    //     var taxes;
-    //     taxes = {};
-    //     var line;
-    //     for (line in this.get_cart()) {
-    //         var item;
-    //         item = this.get_cart()[line];
-    //         var tax_info;
-    //         tax_info = this.CI.Item_taxes.get_info(item['item_id']);
-    //         var _key_;
-    //         for (_key_ in tax_info) {
-    //             var tax;
-    //             tax = tax_info[_key_];
-    //             var name;
-    //             name = tax['percent'].
-    //             '% '.tax['name'];
-    //             var tax_percentage;
-    //             tax_percentage = tax['percent'];
-    //             var tax_amount;
-    //             tax_amount = this.get_item_tax(item['quantity'], item['price'], item['discount'], tax_percentage);
-    //             if (!isset(taxes[name])) {
-    //                 taxes[name] = 0;
-    //             }
-    //             taxes[name] = bcadd(taxes[name], tax_amount, PRECISION);
-    //         }
-    //     }
-    //     return taxes;
-    // };
+
+
     // this.get_discount = function() {
     //     var discount;
     //     discount = 0;

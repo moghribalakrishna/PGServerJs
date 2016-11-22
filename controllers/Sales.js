@@ -1,40 +1,59 @@
 /*jshint sub:true*/
 
+var Models = require('../models');
+var customerModel = Models.profitGuru_customers;
+
 module.exports = function(requestSession) {
 
     var salesController = {};
-    //var salesControllerLib = new salesControllerLib(requestSession);
-    var salesControllerLib = require('./libraries/salesControllerLib')(requestSession);
+    //var this.salesControllerLib = new this.salesControllerLib(requestSession);
+    salesController.salesControllerLib = require('./libraries/this.salesControllerLib')(requestSession);
+
+    salesController.addCustomer2SaleRestApi = function(requestData) {
+
+        return new Promise(function(resolve, reject) {
+            var customer_id = requestData['customer_id'];
+            this.salesControllerLib.set_customer(requestData['customer_id']);
+            resolve({
+                'succs_customer_id': customer_id
+            });
+
+        });
+    };
+
     salesController.addItem = function(requestData) {
         return new Promise(function(resolve, reject) {
 
-            var mode = salesControllerLib.get_mode();
+            var mode = this.salesControllerLib.get_mode();
             var quantity = mode == 'return' ? -1 : 1;
-            var itemLocation = salesControllerLib.getSaleLocation();
+            var itemLocation = this.salesControllerLib.getSaleLocation();
 
             if (mode == 'return') {
                 var receiptNumberOrInvoiceNumber = requestData['item'];
-                return salesControllerLib.getSaleIdFromReceiptOrInvoiceNumber(receiptNumberOrInvoiceNumber).then(function(saleId) {
+                return this.salesControllerLib.getSaleIdFromReceiptOrInvoiceNumber(receiptNumberOrInvoiceNumber).then(function(saleId) {
                     if (!saleId) {
                         reject(receiptNumberOrInvoiceNumber + ' is not a Valid receiptNumberOrInvoiceNumber');
                     } else {
-                        return salesControllerLib.returnEntireSale(saleId).then(function(resp) {
+                        return this.salesControllerLib.returnEntireSale(saleId).then(function(resp) {
 
                         });
                     }
                 });
             } else {
                 var itemIdOrItemKit = requestData['item'];
-                return salesControllerLib.isValidItemKit(itemIdOrItemKit).then(function(isItemKit) {
+                return this.salesControllerLib.isValidItemKit(itemIdOrItemKit).then(function(isItemKit) {
                     if (isItemKit) {
-                        return salesControllerLib.addItemKit(itemIdOrItemKit, itemLocation);
+                        return this.salesControllerLib.addItemKit(itemIdOrItemKit, itemLocation);
                     } else {
-                        return salesControllerLib.addItemToCart(itemIdOrItemKit, quantity, itemLocation, this.config.item('default_sales_discount'));
+                        //TODO made default_sales_discount to null
+                        //this.config.item('default_sales_discount'
+                        //add_item($item_id_or_number_or_item_kit_or_receipt,$quantity,$item_location,$this->config->item('default_sales_discount'))
+                        return this.salesControllerLib.addItemToCart(itemIdOrItemKit, quantity, itemLocation, null);
                     }
                 });
 
             }
-            data['warning'] = salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation);
+            data['warning'] = this.salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation);
             this._reload4RestApi(data);
 
         });
@@ -45,31 +64,32 @@ module.exports = function(requestSession) {
         //TODO
         //var person_info = this.Employee.get_logged_in_employee_info();
         var loggedInEmployeeId = 1;
-        data['cart'] = salesControllerLib.get_cart();
+        data['cart'] = this.salesControllerLib.get_cart();
         data['modes'] = {
             sale: 'sale',
             return: 'return'
         };
-        data['mode'] = salesControllerLib.session.mode;
+        data['mode'] = this.salesControllerLib.session.mode;
         //TODO looks this is not needed at client side
         //data['stock_locations'] = this.Stock_location.get_allowed_locations('sales');
-        data['stock_location'] = salesControllerLib.session.location_id;
-        data['subtotal'] = salesControllerLib.get_subtotal(true);
-        data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
+        data['stock_location'] = this.salesControllerLib.session.location_id;
+        data['subtotal'] = this.salesControllerLib.get_subtotal(true);
+        data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
 
         //Todo we should use taxes filed only, not taxArray
-        $data['taxes'] = salesControllerLib.get_taxes();
+        $data['taxes'] = this.salesControllerLib.get_taxes();
 
         //data['taxesArray'] = this.getAllCartItemTaxes();
-        data['discount'] = salesControllerLib.get_discount();
-        data['total'] = salesControllerLib.get_total();
+        data['discount'] = this.salesControllerLib.get_discount();
+        data['total'] = this.salesControllerLib.get_total();
         data['items_module_allowed'] = this.Employee.has_grant('items', loggedInEmployeeId);
-        data['comment'] = salesControllerLib.get_comment();
-        data['email_receipt'] = salesControllerLib.get_email_receipt();
-        data['payments_total'] = salesControllerLib.get_payments_total();
-        data['amount_due'] = salesControllerLib.get_amount_due();
-        data['payments'] = salesControllerLib.get_payments();
+        data['comment'] = this.salesControllerLib.get_comment();
+        data['email_receipt'] = this.salesControllerLib.get_email_receipt();
+        data['payments_total'] = this.salesControllerLib.get_payments_total();
+        data['amount_due'] = this.salesControllerLib.get_amount_due();
+        data['payments'] = this.salesControllerLib.get_payments();
         data['payment_options'] = {};
+
         //TODO might have to create new table with payment options and its names
         // data['payment_options'] = {
         //     this.lang.line('sales_cash'): this.lang.line('sales_cash'),
@@ -78,19 +98,19 @@ module.exports = function(requestSession) {
         //     this.lang.line('sales_credit'): this.lang.line('sales_credit')
         // };
 
-        var customer_id = salesControllerLib.get_customer();
+        var customer_id = this.salesControllerLib.get_customer();
 
         var cust_info = '';
         if (customer_id != -1) {
             cust_info = this.Customer.get_info(customer_id);
             data['customer'] = cust_info.first_name + ' ' + cust_info.last_name;
             data['customer_email'] = cust_info.email;
-            data['customer_id'] = salesControllerLib.get_customer();
+            data['customer_id'] = this.salesControllerLib.get_customer();
             data['loyalityeligible'] = cust_info.loyalty;
         }
         data['invoice_number'] = this._substitute_invoice_number(cust_info);
-        data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
-        data['print_after_sale'] = salesControllerLib.is_print_after_sale();
+        data['invoice_number_enabled'] = this.salesControllerLib.is_invoice_number_enabled();
+        data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
         data['payments_cover_total'] = this._payments_cover_total();
 
     };
@@ -110,7 +130,7 @@ module.exports = function(requestSession) {
     //         payment_type = requestData['payment_type'];
     //         if (payment_type == this.lang.line('sales_giftcard')) {
     //             var payments;
-    //             payments = salesControllerLib.get_payments();
+    //             payments = this.salesControllerLib.get_payments();
     //             var payment_amount;
     //             payment_type = requestData['payment_type'] + ':' + (payment_amount = requestData['amount_tendered']);
     //             var current_payments_with_giftcard;
@@ -127,20 +147,20 @@ module.exports = function(requestSession) {
     //                 return;
     //             }
     //             var new_giftcard_value;
-    //             new_giftcard_value = this.Giftcard.get_giftcard_value(requestData['amount_tendered']) - salesControllerLib.get_amount_due();
+    //             new_giftcard_value = this.Giftcard.get_giftcard_value(requestData['amount_tendered']) - this.salesControllerLib.get_amount_due();
     //             new_giftcard_value = new_giftcard_value >= 0 ? new_giftcard_value : 0;
     //             var value4GiftCard;
     //             value4GiftCard = new_giftcard_value + (this.Giftcard.get_giftcard_value(requestData['amount_tendered']) - giftcardAmtToRedeem);
-    //             data['newGiftcardvalue'] = this.Giftcard.get_giftcard_value(requestData['amount_tendered']) - (salesControllerLib.get_payments_total() + giftcardAmtToRedeem);
+    //             data['newGiftcardvalue'] = this.Giftcard.get_giftcard_value(requestData['amount_tendered']) - (this.salesControllerLib.get_payments_total() + giftcardAmtToRedeem);
     //             // $this->Giftcard->newgiftcard_value($requestData ['amount_tendered'],$value4GiftCard);
     //             var abc;
-    //             abc = salesControllerLib.set_giftcard_remainder(value4GiftCard);
+    //             abc = this.salesControllerLib.set_giftcard_remainder(value4GiftCard);
     //             data['warning'] = this.lang.line('giftcards_remaining_balance', requestData['amount_tendered'], to_currency(new_giftcard_value, true));
-    //             payment_amount = min(salesControllerLib.get_amount_due(), giftcardAmtToRedeem);
+    //             payment_amount = min(this.salesControllerLib.get_amount_due(), giftcardAmtToRedeem);
     //         } else {
     //             payment_amount = requestData['amount_tendered'];
     //         }
-    //         if (!salesControllerLib.add_payment(payment_type, payment_amount)) {
+    //         if (!this.salesControllerLib.add_payment(payment_type, payment_amount)) {
     //             data['error'] = 'Unable to Add Payment! Please try again!';
     //         }
     //         this._reload4RestApi(data);
@@ -238,21 +258,13 @@ module.exports = function(requestSession) {
     //         }
     //     }
 
-    //     function addCustomer2SaleRestApi() {
-    //         //$customer_id = $this->input->post("customer");
-    //         var customer_id, requestData;
-    //         customer_id = requestData['customer_id'];
-    //         salesControllerLib.set_customer(customer_id);
-    //         console.log(json_encode({
-    //             'succs_customer_id': customer_id
-    //         }));
-    //     }
+
 
     //     function addCustomer2OrdersRestApi() {
     //         //$customer_id = $this->input->post("customer");
     //         var customer_id, requestData;
     //         customer_id = requestData['customer_id'];
-    //         salesControllerLib.set_customer(customer_id);
+    //         this.salesControllerLib.set_customer(customer_id);
     //         console.log(json_encode({
     //             'succs_customer_id': customer_id
     //         }));
@@ -261,13 +273,13 @@ module.exports = function(requestSession) {
     //     function changeModeRestApi() {
     //         var stock_location, requestData;
     //         stock_location = requestData['stock_location'];
-    //         if (!stock_location || stock_location == salesControllerLib.get_sale_location()) {
+    //         if (!stock_location || stock_location == this.salesControllerLib.get_sale_location()) {
     //             var mode;
     //             mode = requestData['mode'];
-    //             salesControllerLib.set_mode(mode);
+    //             this.salesControllerLib.set_mode(mode);
     //         } else {
     //             if (this.Stock_location.is_allowed_location(stock_location, 'sales')) {
-    //                 salesControllerLib.set_sale_location(stock_location);
+    //                 this.salesControllerLib.set_sale_location(stock_location);
     //             }
     //         }
     //         this._reload4RestApi();
@@ -276,52 +288,52 @@ module.exports = function(requestSession) {
     //     function change_mode() {
     //         var stock_location;
     //         stock_location = this.input.post('stock_location');
-    //         if (!stock_location || stock_location == salesControllerLib.get_sale_location()) {
+    //         if (!stock_location || stock_location == this.salesControllerLib.get_sale_location()) {
     //             var mode;
     //             mode = this.input.post('mode');
-    //             salesControllerLib.set_mode(mode);
+    //             this.salesControllerLib.set_mode(mode);
     //         } else {
     //             if (this.Stock_location.is_allowed_location(stock_location, 'sales')) {
-    //                 salesControllerLib.set_sale_location(stock_location);
+    //                 this.salesControllerLib.set_sale_location(stock_location);
     //             }
     //         }
     //         this._reload();
     //     }
 
     //     function set_comment() {
-    //         salesControllerLib.set_comment(this.input.post('comment'));
+    //         this.salesControllerLib.set_comment(this.input.post('comment'));
     //     }
 
     //     function setCommentRestApi() {
-    //         salesControllerLib.set_comment(requestData['comment']);
+    //         this.salesControllerLib.set_comment(requestData['comment']);
     //     }
 
     //     function set_invoice_number() {
-    //         salesControllerLib.set_invoice_number(this.input.post('sales_invoice_number'));
+    //         this.salesControllerLib.set_invoice_number(this.input.post('sales_invoice_number'));
     //     }
 
     //     function setInvoiceNumberRestApi() {
-    //         salesControllerLib.set_invoice_number(requestData['sales_invoice_number']);
+    //         this.salesControllerLib.set_invoice_number(requestData['sales_invoice_number']);
     //     }
 
     //     function set_invoice_number_enabled() {
-    //         salesControllerLib.set_invoice_number_enabled(this.input.post('sales_invoice_number_enabled'));
+    //         this.salesControllerLib.set_invoice_number_enabled(this.input.post('sales_invoice_number_enabled'));
     //     }
 
     //     function setInvoiceNumberEnabledRestApi() {
-    //         salesControllerLib.set_invoice_number_enabled(requestData['sales_invoice_number_enabled']);
+    //         this.salesControllerLib.set_invoice_number_enabled(requestData['sales_invoice_number_enabled']);
     //     }
 
     //     function set_print_after_sale() {
-    //         salesControllerLib.set_print_after_sale(this.input.post('sales_print_after_sale'));
+    //         this.salesControllerLib.set_print_after_sale(this.input.post('sales_print_after_sale'));
     //     }
 
     //     function setPrintAfterSaleRestApi() {
-    //         salesControllerLib.set_print_after_sale(requestData['sales_print_after_sale']);
+    //         this.salesControllerLib.set_print_after_sale(requestData['sales_print_after_sale']);
     //     }
 
     //     function set_email_receipt() {
-    //         salesControllerLib.set_email_receipt(this.input.post('email_receipt'));
+    //         this.salesControllerLib.set_email_receipt(this.input.post('email_receipt'));
     //     }
     //     // Multiple Payments
 
@@ -342,7 +354,7 @@ module.exports = function(requestSession) {
     //         payment_type = this.input.post('payment_type');
     //         if (payment_type == this.lang.line('sales_giftcard')) {
     //             var payments;
-    //             payments = salesControllerLib.get_payments();
+    //             payments = this.salesControllerLib.get_payments();
     //             var payment_amount;
     //             payment_type = this.input.post('payment_type').
     //             ':'.(payment_amount = this.input.post('amount_tendered'));
@@ -356,22 +368,22 @@ module.exports = function(requestSession) {
     //                 return;
     //             }
     //             var new_giftcard_value;
-    //             new_giftcard_value = this.Giftcard.get_giftcard_value(this.input.post('amount_tendered')) - salesControllerLib.get_amount_due();
+    //             new_giftcard_value = this.Giftcard.get_giftcard_value(this.input.post('amount_tendered')) - this.salesControllerLib.get_amount_due();
     //             new_giftcard_value = new_giftcard_value >= 0 ? new_giftcard_value : 0;
-    //             salesControllerLib.set_giftcard_remainder(new_giftcard_value);
+    //             this.salesControllerLib.set_giftcard_remainder(new_giftcard_value);
     //             data['warning'] = this.lang.line('giftcards_remaining_balance', this.input.post('amount_tendered'), to_currency(new_giftcard_value, true));
-    //             payment_amount = min(salesControllerLib.get_amount_due(), this.Giftcard.get_giftcard_value(this.input.post('amount_tendered')));
+    //             payment_amount = min(this.salesControllerLib.get_amount_due(), this.Giftcard.get_giftcard_value(this.input.post('amount_tendered')));
     //         } else {
     //             payment_amount = this.input.post('amount_tendered');
     //         }
-    //         if (!salesControllerLib.add_payment(payment_type, payment_amount)) {
+    //         if (!this.salesControllerLib.add_payment(payment_type, payment_amount)) {
     //             data['error'] = 'Unable to Add Payment! Please try again!';
     //         }
     //         this._reload(data);
     //     }
     //     // Multiple Payments
     //     function delete_payment(payment_id) {
-    //         salesControllerLib.delete_payment(payment_id);
+    //         this.salesControllerLib.delete_payment(payment_id);
     //         this._reload();
     //     }
 
@@ -379,7 +391,7 @@ module.exports = function(requestSession) {
     //         //Gift Card:0 //Debit Card //Credit Card
     //         var payment_id, requestData;
     //         payment_id = requestData['payment_id'];
-    //         salesControllerLib.delete_payment(payment_id);
+    //         this.salesControllerLib.delete_payment(payment_id);
     //         this._reload4RestApi();
     //     }
 
@@ -387,26 +399,26 @@ module.exports = function(requestSession) {
     //         var data;
     //         data = {};
     //         var mode;
-    //         mode = salesControllerLib.get_mode();
+    //         mode = this.salesControllerLib.get_mode();
     //         var item_id_or_number_or_item_kit_or_receipt, requestData;
     //         item_id_or_number_or_item_kit_or_receipt = requestData['item'];
     //         //$item_id_or_number_or_item_kit_or_receipt = $this->input->post("item");
     //         var quantity;
     //         quantity = mode == 'return' ? 1 : -1;
     //         var itemLocation;
-    //         itemLocation = salesControllerLib.get_sale_location();
-    //         if (mode == 'return' && salesControllerLib.isValidReceipt(item_id_or_number_or_item_kit_or_receipt)) {
-    //             salesControllerLib.returnEntireSale(item_id_or_number_or_item_kit_or_receipt);
+    //         itemLocation = this.salesControllerLib.get_sale_location();
+    //         if (mode == 'return' && this.salesControllerLib.isValidReceipt(item_id_or_number_or_item_kit_or_receipt)) {
+    //             this.salesControllerLib.returnEntireSale(item_id_or_number_or_item_kit_or_receipt);
     //         } else {
-    //             if (salesControllerLib.is_valid_item_kit(item_id_or_number_or_item_kit_or_receipt)) {
-    //                 salesControllerLib.addItemKit(item_id_or_number_or_item_kit_or_receipt, itemLocation);
+    //             if (this.salesControllerLib.is_valid_item_kit(item_id_or_number_or_item_kit_or_receipt)) {
+    //                 this.salesControllerLib.addItemKit(item_id_or_number_or_item_kit_or_receipt, itemLocation);
     //             } else {
-    //                 if (!salesControllerLib.addItemToCart(item_id_or_number_or_item_kit_or_receipt, quantity, itemLocation, this.config.item('default_sales_discount'))) {
+    //                 if (!this.salesControllerLib.addItemToCart(item_id_or_number_or_item_kit_or_receipt, quantity, itemLocation, this.config.item('default_sales_discount'))) {
     //                     data['error'] = this.lang.line('sales_unable_to_addItemToCart');
     //                 }
     //             }
     //         }
-    //         if (salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation)) {
+    //         if (this.salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation)) {
     //             data['warning'] = this.lang.line('sales_quantity_less_than_zero');
     //         }
     //         this._reload4RestApi(data);
@@ -447,25 +459,25 @@ module.exports = function(requestSession) {
     //         var data;
     //         data = {};
     //         var mode;
-    //         mode = salesControllerLib.get_mode();
+    //         mode = this.salesControllerLib.get_mode();
     //         var item_id_or_number_or_item_kit_or_receipt;
     //         item_id_or_number_or_item_kit_or_receipt = this.input.post('item');
     //         var quantity;
     //         quantity = mode == 'return' ? -1 : 1;
     //         var itemLocation;
-    //         itemLocation = salesControllerLib.get_sale_location();
-    //         if (mode == 'return' && salesControllerLib.isValidReceipt(item_id_or_number_or_item_kit_or_receipt)) {
-    //             salesControllerLib.returnEntireSale(item_id_or_number_or_item_kit_or_receipt);
+    //         itemLocation = this.salesControllerLib.get_sale_location();
+    //         if (mode == 'return' && this.salesControllerLib.isValidReceipt(item_id_or_number_or_item_kit_or_receipt)) {
+    //             this.salesControllerLib.returnEntireSale(item_id_or_number_or_item_kit_or_receipt);
     //         } else {
-    //             if (salesControllerLib.is_valid_item_kit(item_id_or_number_or_item_kit_or_receipt)) {
-    //                 salesControllerLib.addItemKit(item_id_or_number_or_item_kit_or_receipt, itemLocation);
+    //             if (this.salesControllerLib.is_valid_item_kit(item_id_or_number_or_item_kit_or_receipt)) {
+    //                 this.salesControllerLib.addItemKit(item_id_or_number_or_item_kit_or_receipt, itemLocation);
     //             } else {
-    //                 if (!salesControllerLib.addItemToCart(item_id_or_number_or_item_kit_or_receipt, quantity, itemLocation, this.config.item('default_sales_discount'))) {
+    //                 if (!this.salesControllerLib.addItemToCart(item_id_or_number_or_item_kit_or_receipt, quantity, itemLocation, this.config.item('default_sales_discount'))) {
     //                     data['error'] = this.lang.line('sales_unable_to_addItemToCart');
     //                 }
     //             }
     //         }
-    //         data['warning'] = salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation);
+    //         data['warning'] = this.salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation);
     //         this._reload(data);
     //     }
 
@@ -492,11 +504,11 @@ module.exports = function(requestSession) {
     //         var amt4loyalty;
     //         amt4loyalty = price * quantity * loyalty4item / 100;
     //         if (this.form_validation.run() != false) {
-    //             salesControllerLib.edit_item(line, description, serialnumber, quantity, discount, price, loyalty4item, amt4loyalty);
+    //             this.salesControllerLib.edit_item(line, description, serialnumber, quantity, discount, price, loyalty4item, amt4loyalty);
     //         } else {
     //             data['error'] = this.lang.line('sales_error_editing_item');
     //         }
-    //         data['warning'] = salesControllerLib.out_of_stock(salesControllerLib.get_item_id(line), itemLocation);
+    //         data['warning'] = this.salesControllerLib.out_of_stock(this.salesControllerLib.get_item_id(line), itemLocation);
     //         this._reload4RestApi(data);
     //     }
 
@@ -519,58 +531,58 @@ module.exports = function(requestSession) {
     //         var itemLocation;
     //         itemLocation = this.input.post('location');
     //         if (this.form_validation.run() != false) {
-    //             salesControllerLib.edit_item(line, description, serialnumber, quantity, discount, price);
+    //             this.salesControllerLib.edit_item(line, description, serialnumber, quantity, discount, price);
     //         } else {
     //             data['error'] = this.lang.line('sales_error_editing_item');
     //         }
-    //         data['warning'] = salesControllerLib.out_of_stock(salesControllerLib.get_item_id(line), itemLocation);
+    //         data['warning'] = this.salesControllerLib.out_of_stock(this.salesControllerLib.get_item_id(line), itemLocation);
     //         this._reload(data);
     //     }
 
     //     function delete_item(item_number) {
-    //         salesControllerLib.delete_item(item_number);
+    //         this.salesControllerLib.delete_item(item_number);
     //         this._reload();
     //     }
 
     //     function DeleteItemFromCartRestApi() {
     //         var item_number, requestData;
     //         item_number = requestData['item'];
-    //         salesControllerLib.delete_item(item_number);
+    //         this.salesControllerLib.delete_item(item_number);
     //         this._reload4RestApi();
     //     }
 
     //     function remove_customer() {
-    //         salesControllerLib.clear_giftcard_remainder();
-    //         salesControllerLib.clear_invoice_number();
-    //         salesControllerLib.remove_customer();
+    //         this.salesControllerLib.clear_giftcard_remainder();
+    //         this.salesControllerLib.clear_invoice_number();
+    //         this.salesControllerLib.remove_customer();
     //         this._reload();
     //     }
 
     //     function completeSaleRestApi() {
     //         var data;
-    //         data['cart'] = salesControllerLib.get_cart();
-    //         data['subtotal'] = salesControllerLib.get_subtotal();
-    //         data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //         data['taxes'] = salesControllerLib.get_taxes();
+    //         data['cart'] = this.salesControllerLib.get_cart();
+    //         data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //         data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //         data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //         data['taxes'] = this.salesControllerLib.get_taxes();
     //         data['taxesData'] = this.getAllCartItemTaxes();
-    //         data['total'] = salesControllerLib.get_total();
-    //         data['discount'] = salesControllerLib.get_discount();
+    //         data['total'] = this.salesControllerLib.get_total();
+    //         data['discount'] = this.salesControllerLib.get_discount();
     //         data['receipt_title'] = this.lang.line('sales_receipt');
     //         data['transaction_time'] = date(this.config.item('dateformat').
     //             ' '.this.config.item('timeformat'));
     //         data['transaction_date'] = date(this.config.item('dateformat'));
     //         data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         var employee_id;
     //         employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //         data['comments'] = salesControllerLib.get_comment();
+    //         data['comments'] = this.salesControllerLib.get_comment();
     //         var emp_info;
     //         emp_info = this.Employee.get_info(employee_id);
-    //         data['payments'] = salesControllerLib.get_payments();
-    //         data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //         data['amount_due'] = salesControllerLib.get_amount_due();
+    //         data['payments'] = this.salesControllerLib.get_payments();
+    //         data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //         data['amount_due'] = this.salesControllerLib.get_amount_due();
     //         data['employee'] = emp_info.first_name.
     //         ' '.emp_info.last_name;
     //         //$data['cart']['employee'] = $data['employee'];
@@ -613,11 +625,11 @@ module.exports = function(requestSession) {
     //         }
     //         var invoice_number;
     //         invoice_number = this._substitute_invoice_number(cust_info);
-    //         if (salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
+    //         if (this.salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
     //             data['error'] = this.lang.line('sales_invoice_number_duplicate');
     //             this._reload4RestApi(data);
     //         } else {
-    //             invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
+    //             invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
     //             data['invoice_number'] = invoice_number;
     //             var sale_id;
     //             sale_id = this.Sale.save(data['cart'], customer_id, employee_id, data['comments'], invoice_number, data['payments']);
@@ -627,7 +639,7 @@ module.exports = function(requestSession) {
     //             } else {
     //                 data['barcode'] = this.barcode_lib.generate_receipt_barcode(data['sale_id']);
     //                 // if we want to email. .. just attach the pdf in there?
-    //                 if (salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
+    //                 if (this.salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
     //                     this.load.library('email');
     //                     var config;
     //                     config['mailtype'] = 'html';
@@ -635,7 +647,7 @@ module.exports = function(requestSession) {
     //                     this.email.from(this.config.item('email'), this.config.item('company'));
     //                     this.email.to(cust_info.email);
     //                     this.email.subject(this.lang.line('sales_receipt'));
-    //                     if (this.config.item('use_invoice_template') && salesControllerLib.is_invoice_number_enabled()) {
+    //                     if (this.config.item('use_invoice_template') && this.salesControllerLib.is_invoice_number_enabled()) {
     //                         data['image_prefix'] = '';
     //                         var filename;
     //                         filename = this._invoice_email_pdf(data);
@@ -652,12 +664,12 @@ module.exports = function(requestSession) {
     //                     this.email.send();
     //                 }
     //             }
-    //             data['cur_giftcard_value'] = salesControllerLib.get_giftcard_remainder();
-    //             data['print_after_sale'] = salesControllerLib.is_print_after_sale();
+    //             data['cur_giftcard_value'] = this.salesControllerLib.get_giftcard_remainder();
+    //             data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
     //             if (data['print_after_sale']) {
     //                 //$this->printReceiptRestApi($data);//;_reload($data);
     //             }
-    //             if (salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
+    //             if (this.salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
     //                 // $url = NodeServerUrl."?event=CompleteSale&id=".$sale_id."&appType=".APPTYPE."&data=".$data;
     //                 // $url = urlencode($url);
     //                 //  file_get_contents(urldecode($url));
@@ -684,7 +696,7 @@ module.exports = function(requestSession) {
     //             '&appType='.APPTYPE;
     //             url = urlencode(url);
     //             file_get_contents(urldecode(url));
-    //             salesControllerLib.clear_all();
+    //             this.salesControllerLib.clear_all();
     //         }
     //     }
 
@@ -698,29 +710,29 @@ module.exports = function(requestSession) {
     //         var reservation_id;
     //         reservation_id = requestData['reservation_id'];
     //         var data;
-    //         data['cart'] = salesControllerLib.get_cart();
-    //         data['subtotal'] = salesControllerLib.get_subtotal();
-    //         data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //         data['taxes'] = salesControllerLib.get_taxes();
+    //         data['cart'] = this.salesControllerLib.get_cart();
+    //         data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //         data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //         data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //         data['taxes'] = this.salesControllerLib.get_taxes();
     //         data['taxesData'] = this.getAllCartItemTaxes();
-    //         data['total'] = salesControllerLib.get_total();
-    //         data['discount'] = salesControllerLib.get_discount();
+    //         data['total'] = this.salesControllerLib.get_total();
+    //         data['discount'] = this.salesControllerLib.get_discount();
     //         data['receipt_title'] = this.lang.line('sales_receipt');
     //         data['transaction_time'] = date(this.config.item('dateformat').
     //             ' '.this.config.item('timeformat'));
     //         data['transaction_date'] = date(this.config.item('dateformat'));
     //         data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         var employee_id;
     //         employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //         data['comments'] = salesControllerLib.get_comment();
+    //         data['comments'] = this.salesControllerLib.get_comment();
     //         var emp_info;
     //         emp_info = this.Employee.get_info(employee_id);
-    //         data['payments'] = salesControllerLib.get_payments();
-    //         data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //         data['amount_due'] = salesControllerLib.get_amount_due();
+    //         data['payments'] = this.salesControllerLib.get_payments();
+    //         data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //         data['amount_due'] = this.salesControllerLib.get_amount_due();
     //         data['employee'] = emp_info.first_name.
     //         ' '.emp_info.last_name;
     //         data['company_info'] = implode('\n\
@@ -759,11 +771,11 @@ module.exports = function(requestSession) {
     //         }
     //         var invoice_number;
     //         invoice_number = this._substitute_invoice_number(cust_info);
-    //         if (salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
+    //         if (this.salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
     //             data['error'] = this.lang.line('sales_invoice_number_duplicate');
     //             this._reload(data);
     //         } else {
-    //             invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
+    //             invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
     //             data['invoice_number'] = invoice_number;
     //             data['sale_id'] = 'POS '.this.Sale.save(data['cart'], customer_id, employee_id, data['comments'], invoice_number, data['payments']);
     //             if (data['sale_id'] == 'POS -1') {
@@ -771,7 +783,7 @@ module.exports = function(requestSession) {
     //             } else {
     //                 data['barcode'] = this.barcode_lib.generate_receipt_barcode(data['sale_id']);
     //                 // if we want to email. .. just attach the pdf in there?
-    //                 if (salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
+    //                 if (this.salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
     //                     this.load.library('email');
     //                     var config;
     //                     config['mailtype'] = 'html';
@@ -779,7 +791,7 @@ module.exports = function(requestSession) {
     //                     this.email.from(this.config.item('email'), this.config.item('company'));
     //                     this.email.to(cust_info.email);
     //                     this.email.subject(this.lang.line('sales_receipt'));
-    //                     if (this.config.item('use_invoice_template') && salesControllerLib.is_invoice_number_enabled()) {
+    //                     if (this.config.item('use_invoice_template') && this.salesControllerLib.is_invoice_number_enabled()) {
     //                         data['image_prefix'] = '';
     //                         var filename;
     //                         filename = this._invoice_email_pdf(data);
@@ -796,9 +808,9 @@ module.exports = function(requestSession) {
     //                     this.email.send();
     //                 }
     //             }
-    //             data['cur_giftcard_value'] = salesControllerLib.get_giftcard_remainder();
-    //             data['print_after_sale'] = salesControllerLib.is_print_after_sale();
-    //             if (salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
+    //             data['cur_giftcard_value'] = this.salesControllerLib.get_giftcard_remainder();
+    //             data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
+    //             if (this.salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
     //                 var show_invoice;
     //                 show_invoice = true;
     //                 console.log(json_encode({
@@ -824,7 +836,7 @@ module.exports = function(requestSession) {
     //             if (!reservation_id == 0) {
     //                 this.Reserve.deleteReservation(reservation_id);
     //             }
-    //             salesControllerLib.clear_all();
+    //             this.salesControllerLib.clear_all();
     //         }
     //         var url;
     //         url = NodeServerUrl.
@@ -836,28 +848,28 @@ module.exports = function(requestSession) {
     //     //function printReceiptRestApi($data){
     //     function completeDeliverySaleApiRestApi() {
     //         var data;
-    //         data['cart'] = salesControllerLib.get_cart();
-    //         data['subtotal'] = salesControllerLib.get_subtotal();
-    //         data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //         data['taxes'] = salesControllerLib.get_taxes();
-    //         data['total'] = salesControllerLib.get_total();
-    //         data['discount'] = salesControllerLib.get_discount();
+    //         data['cart'] = this.salesControllerLib.get_cart();
+    //         data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //         data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //         data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //         data['taxes'] = this.salesControllerLib.get_taxes();
+    //         data['total'] = this.salesControllerLib.get_total();
+    //         data['discount'] = this.salesControllerLib.get_discount();
     //         data['receipt_title'] = this.lang.line('sales_receipt');
     //         data['transaction_time'] = date(this.config.item('dateformat').
     //             ' '.this.config.item('timeformat'));
     //         data['transaction_date'] = date(this.config.item('dateformat'));
     //         data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         var employee_id;
     //         employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //         data['comments'] = salesControllerLib.get_comment();
+    //         data['comments'] = this.salesControllerLib.get_comment();
     //         var emp_info;
     //         emp_info = this.Employee.get_info(employee_id);
-    //         data['payments'] = salesControllerLib.get_payments();
-    //         data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //         data['amount_due'] = salesControllerLib.get_amount_due();
+    //         data['payments'] = this.salesControllerLib.get_payments();
+    //         data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //         data['amount_due'] = this.salesControllerLib.get_amount_due();
     //         data['employee'] = emp_info.first_name.
     //         ' '.emp_info.last_name;
     //         data['company_info'] = implode('\n\
@@ -896,11 +908,11 @@ module.exports = function(requestSession) {
     //         }
     //         var invoice_number;
     //         invoice_number = this._substitute_invoice_number(cust_info);
-    //         if (salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
+    //         if (this.salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
     //             data['error'] = this.lang.line('sales_invoice_number_duplicate');
     //             this._reload(data);
     //         } else {
-    //             invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
+    //             invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
     //             data['invoice_number'] = invoice_number;
     //             var sale_id;
     //             sale_id = this.Sale.save(data['cart'], customer_id, employee_id, data['comments'], invoice_number, data['payments']);
@@ -910,7 +922,7 @@ module.exports = function(requestSession) {
     //             } else {
     //                 data['barcode'] = this.barcode_lib.generate_receipt_barcode(data['sale_id']);
     //                 // if we want to email. .. just attach the pdf in there?
-    //                 if (salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
+    //                 if (this.salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
     //                     this.load.library('email');
     //                     var config;
     //                     config['mailtype'] = 'html';
@@ -918,7 +930,7 @@ module.exports = function(requestSession) {
     //                     this.email.from(this.config.item('email'), this.config.item('company'));
     //                     this.email.to(cust_info.email);
     //                     this.email.subject(this.lang.line('sales_receipt'));
-    //                     if (this.config.item('use_invoice_template') && salesControllerLib.is_invoice_number_enabled()) {
+    //                     if (this.config.item('use_invoice_template') && this.salesControllerLib.is_invoice_number_enabled()) {
     //                         data['image_prefix'] = '';
     //                         var filename;
     //                         filename = this._invoice_email_pdf(data);
@@ -941,13 +953,13 @@ module.exports = function(requestSession) {
     //                 url = urlencode(url);
     //                 file_get_contents(urldecode(url));
     //             }
-    //             data['cur_giftcard_value'] = salesControllerLib.get_giftcard_remainder();
-    //             data['print_after_sale'] = salesControllerLib.is_print_after_sale();
+    //             data['cur_giftcard_value'] = this.salesControllerLib.get_giftcard_remainder();
+    //             data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
     //             if (data['print_after_sale']) {
     //                 //$this->load->view("sales/print_receipt",$data);
     //                 this.printReceiptRestApi(data);
     //             }
-    //             if (salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
+    //             if (this.salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
     //                 //naming the result to "data" to keep it simple @new UI side, we can find out whether to use invoice template or not using invoice
     //                 //number
     //                 var show_invoice;
@@ -965,7 +977,7 @@ module.exports = function(requestSession) {
     //                     'invoice': show_invoice
     //                 }));
     //             }
-    //             salesControllerLib.clear_all();
+    //             this.salesControllerLib.clear_all();
     //             var homeDeliveryData;
     //             homeDeliveryData = this.Delivery.gethomedeliveryBySalesId(requestData['sale_id']).result();
     //             var delivery_id;
@@ -983,28 +995,28 @@ module.exports = function(requestSession) {
 
     //     function completeSale4TwoTerminalRestApi() {
     //         var data;
-    //         data['cart'] = salesControllerLib.get_cart();
-    //         data['subtotal'] = salesControllerLib.get_subtotal();
-    //         data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //         data['taxes'] = salesControllerLib.get_taxes();
-    //         data['total'] = salesControllerLib.get_total();
-    //         data['discount'] = salesControllerLib.get_discount();
+    //         data['cart'] = this.salesControllerLib.get_cart();
+    //         data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //         data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //         data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //         data['taxes'] = this.salesControllerLib.get_taxes();
+    //         data['total'] = this.salesControllerLib.get_total();
+    //         data['discount'] = this.salesControllerLib.get_discount();
     //         data['receipt_title'] = this.lang.line('sales_receipt');
     //         data['transaction_time'] = date(this.config.item('dateformat').
     //             ' '.this.config.item('timeformat'));
     //         data['transaction_date'] = date(this.config.item('dateformat'));
     //         data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         var employee_id;
     //         employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //         data['comments'] = salesControllerLib.get_comment();
+    //         data['comments'] = this.salesControllerLib.get_comment();
     //         var emp_info;
     //         emp_info = this.Employee.get_info(employee_id);
-    //         data['payments'] = salesControllerLib.get_payments();
-    //         data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //         data['amount_due'] = salesControllerLib.get_amount_due();
+    //         data['payments'] = this.salesControllerLib.get_payments();
+    //         data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //         data['amount_due'] = this.salesControllerLib.get_amount_due();
     //         data['employee'] = emp_info.first_name.
     //         ' '.emp_info.last_name;
     //         data['company_info'] = implode('\n\
@@ -1043,11 +1055,11 @@ module.exports = function(requestSession) {
     //         }
     //         var invoice_number;
     //         invoice_number = this._substitute_invoice_number(cust_info);
-    //         if (salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
+    //         if (this.salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
     //             data['error'] = this.lang.line('sales_invoice_number_duplicate');
     //             this._reload(data);
     //         } else {
-    //             invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
+    //             invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
     //             data['invoice_number'] = invoice_number;
     //             data['sale_id'] = 'POS '.this.Sale.save(data['cart'], customer_id, employee_id, data['comments'], invoice_number, data['payments']);
     //             if (data['sale_id'] == 'POS -1') {
@@ -1055,7 +1067,7 @@ module.exports = function(requestSession) {
     //             } else {
     //                 data['barcode'] = this.barcode_lib.generate_receipt_barcode(data['sale_id']);
     //                 // if we want to email. .. just attach the pdf in there?
-    //                 if (salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
+    //                 if (this.salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
     //                     this.load.library('email');
     //                     var config;
     //                     config['mailtype'] = 'html';
@@ -1063,7 +1075,7 @@ module.exports = function(requestSession) {
     //                     this.email.from(this.config.item('email'), this.config.item('company'));
     //                     this.email.to(cust_info.email);
     //                     this.email.subject(this.lang.line('sales_receipt'));
-    //                     if (this.config.item('use_invoice_template') && salesControllerLib.is_invoice_number_enabled()) {
+    //                     if (this.config.item('use_invoice_template') && this.salesControllerLib.is_invoice_number_enabled()) {
     //                         data['image_prefix'] = '';
     //                         var filename;
     //                         filename = this._invoice_email_pdf(data);
@@ -1080,13 +1092,13 @@ module.exports = function(requestSession) {
     //                     this.email.send();
     //                 }
     //             }
-    //             data['cur_giftcard_value'] = salesControllerLib.get_giftcard_remainder();
-    //             data['print_after_sale'] = salesControllerLib.is_print_after_sale();
+    //             data['cur_giftcard_value'] = this.salesControllerLib.get_giftcard_remainder();
+    //             data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
     //             if (data['print_after_sale']) {
     //                 //$this->load->view("sales/print_receipt",$data);
     //                 this.printReceiptRestApi(data);
     //             }
-    //             if (salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
+    //             if (this.salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
     //                 //naming the result to "data" to keep it simple @new UI side, we can find out whether to use invoice template or not using invoice
     //                 //number
     //                 var show_invoice;
@@ -1104,7 +1116,7 @@ module.exports = function(requestSession) {
     //                     'invoice': show_invoice
     //                 }));
     //             }
-    //             salesControllerLib.clear_all();
+    //             this.salesControllerLib.clear_all();
     //             // $oldcwd = getcwd();
     //             //  //chdir($oldcwd+"/sendEvents2NodeServer");
     //             // shell_exec($oldcwd.'/sendEvents2NodeServer/sendEvent2NodeServer.js sale '.$oldcwd. "> /dev/null 2>/dev/null &" );
@@ -1153,28 +1165,28 @@ module.exports = function(requestSession) {
 
     //     function complete() {
     //         var data;
-    //         data['cart'] = salesControllerLib.get_cart();
-    //         data['subtotal'] = salesControllerLib.get_subtotal();
-    //         data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //         data['taxes'] = salesControllerLib.get_taxes();
-    //         data['total'] = salesControllerLib.get_total();
-    //         data['discount'] = salesControllerLib.get_discount();
+    //         data['cart'] = this.salesControllerLib.get_cart();
+    //         data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //         data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //         data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //         data['taxes'] = this.salesControllerLib.get_taxes();
+    //         data['total'] = this.salesControllerLib.get_total();
+    //         data['discount'] = this.salesControllerLib.get_discount();
     //         data['receipt_title'] = this.lang.line('sales_receipt');
     //         data['transaction_time'] = date(this.config.item('dateformat').
     //             ' '.this.config.item('timeformat'));
     //         data['transaction_date'] = date(this.config.item('dateformat'));
     //         data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         var employee_id;
     //         employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //         data['comments'] = salesControllerLib.get_comment();
+    //         data['comments'] = this.salesControllerLib.get_comment();
     //         var emp_info;
     //         emp_info = this.Employee.get_info(employee_id);
-    //         data['payments'] = salesControllerLib.get_payments();
-    //         data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //         data['amount_due'] = salesControllerLib.get_amount_due();
+    //         data['payments'] = this.salesControllerLib.get_payments();
+    //         data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //         data['amount_due'] = this.salesControllerLib.get_amount_due();
     //         data['employee'] = emp_info.first_name.
     //         ' '.emp_info.last_name;
     //         data['company_info'] = implode('\n\
@@ -1207,11 +1219,11 @@ module.exports = function(requestSession) {
     //         }
     //         var invoice_number;
     //         invoice_number = this._substitute_invoice_number(cust_info);
-    //         if (salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
+    //         if (this.salesControllerLib.is_invoice_number_enabled() && this.Sale.invoice_number_exists(invoice_number)) {
     //             data['error'] = this.lang.line('sales_invoice_number_duplicate');
     //             this._reload(data);
     //         } else {
-    //             invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : null;
+    //             invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : null;
     //             data['invoice_number'] = invoice_number;
     //             data['sale_id'] = 'POS '.this.Sale.save(data['cart'], customer_id, employee_id, data['comments'], invoice_number, data['payments']);
     //             if (data['sale_id'] == 'POS -1') {
@@ -1219,7 +1231,7 @@ module.exports = function(requestSession) {
     //             } else {
     //                 data['barcode'] = this.barcode_lib.generate_receipt_barcode(data['sale_id']);
     //                 // if we want to email. .. just attach the pdf in there?
-    //                 if (salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
+    //                 if (this.salesControllerLib.get_email_receipt() && !empty(cust_info.email)) {
     //                     this.load.library('email');
     //                     var config;
     //                     config['mailtype'] = 'html';
@@ -1227,7 +1239,7 @@ module.exports = function(requestSession) {
     //                     this.email.from(this.config.item('email'), this.config.item('company'));
     //                     this.email.to(cust_info.email);
     //                     this.email.subject(this.lang.line('sales_receipt'));
-    //                     if (this.config.item('use_invoice_template') && salesControllerLib.is_invoice_number_enabled()) {
+    //                     if (this.config.item('use_invoice_template') && this.salesControllerLib.is_invoice_number_enabled()) {
     //                         data['image_prefix'] = '';
     //                         var filename;
     //                         filename = this._invoice_email_pdf(data);
@@ -1244,14 +1256,14 @@ module.exports = function(requestSession) {
     //                     this.email.send();
     //                 }
     //             }
-    //             data['cur_giftcard_value'] = salesControllerLib.get_giftcard_remainder();
-    //             data['print_after_sale'] = salesControllerLib.is_print_after_sale();
-    //             if (salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
+    //             data['cur_giftcard_value'] = this.salesControllerLib.get_giftcard_remainder();
+    //             data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
+    //             if (this.salesControllerLib.is_invoice_number_enabled() && this.config.item('use_invoice_template')) {
     //                 this.load.view('sales/invoice', data);
     //             } else {
     //                 this.load.view('sales/receipt', data);
     //             }
-    //             salesControllerLib.clear_all();
+    //             this.salesControllerLib.clear_all();
     //             var oldcwd;
     //             oldcwd = getcwd();
     //             //chdir($oldcwd+"/sendEvents2NodeServer");
@@ -1281,7 +1293,7 @@ module.exports = function(requestSession) {
     //     function _substitute_customer(text, cust_info) {
     //         // substitute customer info
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         if (customer_id != -1 && cust_info != '') {
     //             text = str_replace('$CU', cust_info.first_name.
     //                 ' '.cust_info.last_name, text);
@@ -1314,38 +1326,38 @@ module.exports = function(requestSession) {
     //         var invoice_number;
     //         invoice_number = this.config.config['sales_invoice_format'];
     //         invoice_number = this._substitute_variables(invoice_number, cust_info);
-    //         salesControllerLib.set_invoice_number(invoice_number, true);
-    //         return salesControllerLib.get_invoice_number();
+    //         this.salesControllerLib.set_invoice_number(invoice_number, true);
+    //         return this.salesControllerLib.get_invoice_number();
     //     }
 
     //     function _load_sale_data(sale_id) {
     //         this.Sale.create_sales_items_temp_table();
-    //         salesControllerLib.clear_all();
+    //         this.salesControllerLib.clear_all();
     //         var sale_info;
     //         sale_info = this.Sale.get_info(sale_id).row_array();
-    //         salesControllerLib.copy_entire_sale(sale_id);
+    //         this.salesControllerLib.copy_entire_sale(sale_id);
     //         var data;
-    //         data['cart'] = salesControllerLib.get_cart();
-    //         data['payments'] = salesControllerLib.get_payments();
-    //         data['subtotal'] = salesControllerLib.get_subtotal();
-    //         data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //         data['taxes'] = salesControllerLib.get_taxes();
-    //         data['total'] = salesControllerLib.get_total();
-    //         data['discount'] = salesControllerLib.get_discount();
+    //         data['cart'] = this.salesControllerLib.get_cart();
+    //         data['payments'] = this.salesControllerLib.get_payments();
+    //         data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //         data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //         data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //         data['taxes'] = this.salesControllerLib.get_taxes();
+    //         data['total'] = this.salesControllerLib.get_total();
+    //         data['discount'] = this.salesControllerLib.get_discount();
     //         data['receipt_title'] = this.lang.line('sales_receipt');
     //         data['transaction_time'] = date(this.config.item('dateformat').
     //             ' '.this.config.item('timeformat'), strtotime(sale_info['sale_time']));
     //         data['transaction_date'] = date(this.config.item('dateformat'), strtotime(sale_info['sale_time']));
     //         data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //         var customer_id;
-    //         customer_id = salesControllerLib.get_customer();
+    //         customer_id = this.salesControllerLib.get_customer();
     //         var employee_id;
     //         employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //         var emp_info;
     //         emp_info = this.Employee.get_info(employee_id);
-    //         data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //         data['amount_due'] = salesControllerLib.get_amount_due();
+    //         data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //         data['amount_due'] = this.salesControllerLib.get_amount_due();
     //         data['employee'] = emp_info.first_name.
     //         ' '.emp_info.last_name;
     //         if (customer_id != -1) {
@@ -1390,7 +1402,7 @@ module.exports = function(requestSession) {
     //         var data;
     //         data = this._load_sale_data(sale_id);
     //         this.load.view('sales/receipt', data);
-    //         salesControllerLib.clear_all();
+    //         this.salesControllerLib.clear_all();
     //     }
 
     //     function receiptRestApi() {
@@ -1403,7 +1415,7 @@ module.exports = function(requestSession) {
     //         console.log(json_encode({
     //             'data': data
     //         }));
-    //         salesControllerLib.clear_all();
+    //         this.salesControllerLib.clear_all();
     //     }
 
     //     Convert
@@ -1614,13 +1626,13 @@ module.exports = function(requestSession) {
     //         var total_payments;
     //         total_payments = 0;
     //         var _key_;
-    //         for (_key_ in salesControllerLib.get_payments()) {
+    //         for (_key_ in this.salesControllerLib.get_payments()) {
     //             var payment;
-    //             payment = salesControllerLib.get_payments()[_key_];
+    //             payment = this.salesControllerLib.get_payments()[_key_];
     //             total_payments += payment['payment_amount'];
     //         }
     //         /* Changed the conditional to account for floating point rounding 
-    //     if (salesControllerLib.get_mode() == 'sale' && to_currency_no_money(salesControllerLib.get_total()) - total_payments > 1.0E-6) {
+    //     if (this.salesControllerLib.get_mode() == 'sale' && to_currency_no_money(this.salesControllerLib.get_total()) - total_payments > 1.0E-6) {
     //         return false;
     //     }
     //     return true;
@@ -1630,12 +1642,12 @@ module.exports = function(requestSession) {
     //     var taxArray;
     //     taxArray = {};
     //     var line;
-    //     for (line in salesControllerLib.get_cart()) {
+    //     for (line in this.salesControllerLib.get_cart()) {
     //         var item;
-    //         item = salesControllerLib.get_cart()[line];
+    //         item = this.salesControllerLib.get_cart()[line];
     //         //array_push($data, $this->sale_lib->CI->Item_taxes->get_info($item['item_id']));
     //         var data;
-    //         data = salesControllerLib.CI.Item_taxes.get_info(item['item_id']);
+    //         data = this.salesControllerLib.CI.Item_taxes.get_info(item['item_id']);
     //         var _key_;
     //         for (_key_ in data) {
     //             var tax;
@@ -1647,7 +1659,7 @@ module.exports = function(requestSession) {
     //             //array_push($taxAmt,$this->sale_lib->get_item_tax($item['quantity'], $item['price'], $item['discount'], $tax_percentage));
     //             taxAmt['item_id'] = item['item_id'];
     //             taxAmt['percent'] = tax_percentage;
-    //             taxAmt['Amt'] = salesControllerLib.get_item_tax(item['quantity'], item['price'], item['discount'], tax_percentage);
+    //             taxAmt['Amt'] = this.salesControllerLib.get_item_tax(item['quantity'], item['price'], item['discount'], tax_percentage);
     //             taxAmt['name'] = tax['name'];
     //             array_push(taxArray, taxAmt);
     //             //$taxAmt[$item['item_id']] =$this->sale_lib->get_item_tax($item['quantity'], $item['price'], $item['discount'], $tax_percentage);
@@ -1665,12 +1677,12 @@ module.exports = function(requestSession) {
     //     var taxArray;
     //     taxArray = {};
     //     var line;
-    //     for (line in salesControllerLib.get_cart()) {
+    //     for (line in this.salesControllerLib.get_cart()) {
     //         var item;
-    //         item = salesControllerLib.get_cart()[line];
+    //         item = this.salesControllerLib.get_cart()[line];
     //         //array_push($data, $this->sale_lib->CI->Item_taxes->get_info($item['item_id']));
     //         var data;
-    //         data = salesControllerLib.CI.Item_taxes.get_info(item['item_id']);
+    //         data = this.salesControllerLib.CI.Item_taxes.get_info(item['item_id']);
 
     //         var _key_;
     //         for (_key_ in data) {
@@ -1683,7 +1695,7 @@ module.exports = function(requestSession) {
     //             //array_push($taxAmt,$this->sale_lib->get_item_tax($item['quantity'], $item['price'], $item['discount'], $tax_percentage));
     //             taxAmt['item_id'] = item['item_id'];
     //             taxAmt['percent'] = tax_percentage;
-    //             taxAmt['Amt'] = salesControllerLib.get_item_tax(item['quantity'], item['price'], item['discount'], tax_percentage);
+    //             taxAmt['Amt'] = this.salesControllerLib.get_item_tax(item['quantity'], item['price'], item['discount'], tax_percentage);
     //             taxAmt['name'] = tax['name'];
     //             array_push(taxArray, taxAmt);
     //             //$taxAmt[$item['item_id']] =$this->sale_lib->get_item_tax($item['quantity'], $item['price'], $item['discount'], $tax_percentage);
@@ -1704,21 +1716,21 @@ module.exports = function(requestSession) {
     //         'sale': this.lang.line('sales_sale'),
     //         'return': this.lang.line('sales_return')
     //     };
-    //     data['mode'] = salesControllerLib.get_mode();
+    //     data['mode'] = this.salesControllerLib.get_mode();
     //     data['stock_locations'] = this.Stock_location.get_allowed_locations('sales');
-    //     data['stock_location'] = salesControllerLib.get_sale_location();
-    //     data['subtotal'] = salesControllerLib.get_subtotal(true);
-    //     data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
+    //     data['stock_location'] = this.salesControllerLib.get_sale_location();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //     data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
     //     //$data['taxes'] = $this->sale_lib->get_taxes();
     //     data['taxesArray'] = this.getAllCartItemTaxes();
-    //     data['discount'] = salesControllerLib.get_discount();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['discount'] = this.salesControllerLib.get_discount();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['items_module_allowed'] = this.Employee.has_grant('items', person_info.person_id);
-    //     data['comment'] = salesControllerLib.get_comment();
-    //     data['email_receipt'] = salesControllerLib.get_email_receipt();
-    //     data['payments_total'] = salesControllerLib.get_payments_total();
-    //     data['amount_due'] = salesControllerLib.get_amount_due();
-    //     data['payments'] = salesControllerLib.get_payments();
+    //     data['comment'] = this.salesControllerLib.get_comment();
+    //     data['email_receipt'] = this.salesControllerLib.get_email_receipt();
+    //     data['payments_total'] = this.salesControllerLib.get_payments_total();
+    //     data['amount_due'] = this.salesControllerLib.get_amount_due();
+    //     data['payments'] = this.salesControllerLib.get_payments();
     //     data['payment_options'] = {
     //         this.lang.line('sales_cash'): this.lang.line('sales_cash'),
     //         this.lang.line('sales_check'): this.lang.line('sales_check'),
@@ -1735,8 +1747,8 @@ module.exports = function(requestSession) {
     //         data['customer_email'] = cust_info.email;
     //     }
     //     data['invoice_number'] = this._substitute_invoice_number(cust_info);
-    //     data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
-    //     data['print_after_sale'] = salesControllerLib.is_print_after_sale();
+    //     data['invoice_number_enabled'] = this.salesControllerLib.is_invoice_number_enabled();
+    //     data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
     //     data['payments_cover_total'] = this._payments_cover_total();
     //     //$this->load->view("sales/register",$data);
     //     console.log(json_encode({
@@ -1750,25 +1762,25 @@ module.exports = function(requestSession) {
     //     if (typeof data == 'undefined') data = {};
     //     var person_info;
     //     person_info = this.Employee.get_logged_in_employee_info();
-    //     data['cart'] = salesControllerLib.get_cart();
+    //     data['cart'] = this.salesControllerLib.get_cart();
     //     data['modes'] = {
     //         'sale': this.lang.line('sales_sale'),
     //         'return': this.lang.line('sales_return')
     //     };
-    //     data['mode'] = salesControllerLib.get_mode();
+    //     data['mode'] = this.salesControllerLib.get_mode();
     //     data['stock_locations'] = this.Stock_location.get_allowed_locations('sales');
-    //     data['stock_location'] = salesControllerLib.get_sale_location();
-    //     data['subtotal'] = salesControllerLib.get_subtotal(true);
-    //     data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['discount'] = salesControllerLib.get_discount();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['stock_location'] = this.salesControllerLib.get_sale_location();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //     data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['discount'] = this.salesControllerLib.get_discount();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['items_module_allowed'] = this.Employee.has_grant('items', person_info.person_id);
-    //     data['comment'] = salesControllerLib.get_comment();
-    //     data['email_receipt'] = salesControllerLib.get_email_receipt();
-    //     data['payments_total'] = salesControllerLib.get_payments_total();
-    //     data['amount_due'] = salesControllerLib.get_amount_due();
-    //     data['payments'] = salesControllerLib.get_payments();
+    //     data['comment'] = this.salesControllerLib.get_comment();
+    //     data['email_receipt'] = this.salesControllerLib.get_email_receipt();
+    //     data['payments_total'] = this.salesControllerLib.get_payments_total();
+    //     data['amount_due'] = this.salesControllerLib.get_amount_due();
+    //     data['payments'] = this.salesControllerLib.get_payments();
     //     data['payment_options'] = {
     //         this.lang.line('sales_cash'): this.lang.line('sales_cash'),
     //         this.lang.line('sales_check'): this.lang.line('sales_check'),
@@ -1777,7 +1789,7 @@ module.exports = function(requestSession) {
     //         this.lang.line('sales_credit'): this.lang.line('sales_credit')
     //     };
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var cust_info;
     //     cust_info = '';
     //     if (customer_id != -1) {
@@ -1787,45 +1799,45 @@ module.exports = function(requestSession) {
     //         data['customer_email'] = cust_info.email;
     //     }
     //     data['invoice_number'] = this._substitute_invoice_number(cust_info);
-    //     data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
-    //     data['print_after_sale'] = salesControllerLib.is_print_after_sale();
+    //     data['invoice_number_enabled'] = this.salesControllerLib.is_invoice_number_enabled();
+    //     data['print_after_sale'] = this.salesControllerLib.is_print_after_sale();
     //     data['payments_cover_total'] = this._payments_cover_total();
     //     this.load.view('sales/register', data);
     // }
 
     // function cancel_sale() {
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     this._reload();
     // }
 
     // function cancel_saleRestApi() {
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     this._reload4RestApi();
     // }
 
     // function suspendSaleRestApi() {
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -1851,7 +1863,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     data['success'] = this.lang.line('sales_successfully_suspended_sale');
     //     this._reload4RestApi(data);
     // }
@@ -1942,12 +1954,12 @@ module.exports = function(requestSession) {
     //     '&appType='.APPTYPE;
     //     url = urlencode(url);
     //     file_get_contents(urldecode(url));
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     // }
 
     // function getcart() {
     //     console.log(json_encode({
-    //         0: salesControllerLib.get_cart()
+    //         0: this.salesControllerLib.get_cart()
     //     }));
     // }
 
@@ -1961,10 +1973,10 @@ module.exports = function(requestSession) {
     //     var reservationId;
     //     reservationId = reservation_id;
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
@@ -1972,15 +1984,15 @@ module.exports = function(requestSession) {
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -2008,7 +2020,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     data['success'] = this.lang.line('sales_successfully_suspended_sale');
     //     if (saleId != -1) {
     //         if (!this.Table.insertNewSaleinTable(tableNo, saleId, orderNo)) {
@@ -2031,13 +2043,13 @@ module.exports = function(requestSession) {
     //     //$order_no =2;
     //     var saleIds4ThisTableOrder;
     //     saleIds4ThisTableOrder = this.Table.getSaleIds4ThisTablOrder(table_no, order_no);
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     var _key_;
     //     for (_key_ in saleIds4ThisTableOrder.result()) {
     //         var saleId;
     //         saleId = saleIds4ThisTableOrder.result()[_key_];
 
-    //         salesControllerLib.copyEntireKots4ThisOrder(saleId.sale_id);
+    //         this.salesControllerLib.copyEntireKots4ThisOrder(saleId.sale_id);
     //         this.Sale_suspended.delete4Restaurant(saleId.sale_id, order_no, table_no);
     //     }
     //     this._reload4RestApi();
@@ -2048,26 +2060,26 @@ module.exports = function(requestSession) {
     //     var data;
     //     data = {};
     //     var mode;
-    //     mode = salesControllerLib.get_mode();
+    //     mode = this.salesControllerLib.get_mode();
     //     var item_id_or_number_or_item_kit_or_receipt;
     //     item_id_or_number_or_item_kit_or_receipt = item_id;
     //     //$item_id_or_number_or_item_kit_or_receipt = $this->input->post("item");
     //     var quantity;
     //     quantity = mode == 'return' ? -1 : 1;
     //     var itemLocation;
-    //     itemLocation = salesControllerLib.get_sale_location();
-    //     if (mode == 'return' && salesControllerLib.isValidReceipt(item_id_or_number_or_item_kit_or_receipt)) {
-    //         salesControllerLib.returnEntireSale(item_id_or_number_or_item_kit_or_receipt);
+    //     itemLocation = this.salesControllerLib.get_sale_location();
+    //     if (mode == 'return' && this.salesControllerLib.isValidReceipt(item_id_or_number_or_item_kit_or_receipt)) {
+    //         this.salesControllerLib.returnEntireSale(item_id_or_number_or_item_kit_or_receipt);
     //     } else {
-    //         if (salesControllerLib.is_valid_item_kit(item_id_or_number_or_item_kit_or_receipt)) {
-    //             salesControllerLib.addItemKit(item_id_or_number_or_item_kit_or_receipt, itemLocation);
+    //         if (this.salesControllerLib.is_valid_item_kit(item_id_or_number_or_item_kit_or_receipt)) {
+    //             this.salesControllerLib.addItemKit(item_id_or_number_or_item_kit_or_receipt, itemLocation);
     //         } else {
-    //             if (!salesControllerLib.addItemToCart(item_id_or_number_or_item_kit_or_receipt, quantity, itemLocation, this.config.item('default_sales_discount'))) {
+    //             if (!this.salesControllerLib.addItemToCart(item_id_or_number_or_item_kit_or_receipt, quantity, itemLocation, this.config.item('default_sales_discount'))) {
     //                 data['error'] = this.lang.line('sales_unable_to_addItemToCart');
     //             }
     //         }
     //     }
-    //     if (salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation)) {
+    //     if (this.salesControllerLib.out_of_stock(item_id_or_number_or_item_kit_or_receipt, itemLocation)) {
     //         data['warning'] = this.lang.line('sales_quantity_less_than_zero');
     //     }
     //     this._reload4RestApi(data);
@@ -2111,27 +2123,27 @@ module.exports = function(requestSession) {
     //     order_desc = requestData['order_desc'];
     //     var reservation_id;
     //     reservation_id = requestData['reservation_id'];
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -2159,7 +2171,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     data['success'] = this.lang.line('sales_successfully_suspended_sale');
     //     if (saleId != -1) {
     //         if (!this.Table.insertNewSaleinTable(tableNo, saleId, orderNo)) {
@@ -2200,27 +2212,27 @@ module.exports = function(requestSession) {
     //     saleId_old = requestData['sales_id4kot'];
     //     this.Table.deleteKotinTable(saleId_old);
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -2248,7 +2260,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     data['success'] = this.lang.line('sales_successfully_suspended_sale');
     //     if (saleId != -1) {
     //         if (!this.Table.insertNewSaleinTable(tableNo, saleId, orderNo)) {
@@ -2266,10 +2278,10 @@ module.exports = function(requestSession) {
     //     var customer_id, requestData;
     //     customer_id = requestData['customer_id'];
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
@@ -2277,15 +2289,15 @@ module.exports = function(requestSession) {
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -2315,7 +2327,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     data['success'] = this.lang.line('sales_successfully_suspended_sale');
     //     if (saleId != -1) {
     //         if (!this.Table.insertNewDeliveryRetailSaleinTable(saleId, customer_id)) {
@@ -2335,10 +2347,10 @@ module.exports = function(requestSession) {
     //     var customer_id, requestData;
     //     customer_id = requestData['customer_id'];
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
@@ -2346,15 +2358,15 @@ module.exports = function(requestSession) {
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -2382,7 +2394,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     data['success'] = this.lang.line('sales_successfully_suspended_sale');
     //     if (saleId != -1) {
     //         if (!this.TwoterminalPaymentModel.insertSaleinTwoTerminalOrderTable(saleId, customer_id)) {
@@ -2406,27 +2418,27 @@ module.exports = function(requestSession) {
     // // }
     // function suspend() {
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['taxes'] = salesControllerLib.get_taxes();
-    //     data['total'] = salesControllerLib.get_total();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
+    //     data['total'] = this.salesControllerLib.get_total();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
     //     var comment;
-    //     comment = salesControllerLib.get_comment();
+    //     comment = this.salesControllerLib.get_comment();
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.get_invoice_number();
+    //     invoice_number = this.salesControllerLib.get_invoice_number();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
     //     data['payment_type'] = this.input.post('payment_type');
     //     // Multiple payments
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = to_currency(salesControllerLib.get_amount_due() * -1);
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = to_currency(this.salesControllerLib.get_amount_due() * -1);
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     if (customer_id != -1) {
@@ -2452,7 +2464,7 @@ module.exports = function(requestSession) {
     //     if (data['sale_id'] == 'POS -1') {
     //         data['error_message'] = this.lang.line('sales_transaction_failed');
     //     }
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     this._reload({
     //         'success': this.lang.line('sales_successfully_suspended_sale')
     //     });
@@ -2480,8 +2492,8 @@ module.exports = function(requestSession) {
     // function unsuspendSaleRestApi() {
     //     var sale_id, requestData;
     //     sale_id = requestData['suspended_sale_id'];
-    //     salesControllerLib.clear_all();
-    //     salesControllerLib.copy_entire_suspended_sale(sale_id);
+    //     this.salesControllerLib.clear_all();
+    //     this.salesControllerLib.copy_entire_suspended_sale(sale_id);
     //     this.Sale_suspended.delete(sale_id);
     //     this._reload4RestApi();
     // }
@@ -2493,8 +2505,8 @@ module.exports = function(requestSession) {
     //     table_no4deleteKot = requestData['table_no'];
     //     var order_no4deleteKot;
     //     order_no4deleteKot = requestData['order_no'];
-    //     salesControllerLib.clear_all();
-    //     salesControllerLib.copy_entire_suspended_sale(sale_id);
+    //     this.salesControllerLib.clear_all();
+    //     this.salesControllerLib.copy_entire_suspended_sale(sale_id);
     //     this.Sale_suspended.delete(sale_id);
     //     this.Table.deleteKot4Order(sale_id, table_no4deleteKot, order_no4deleteKot);
     //     var deleteOrder;
@@ -2508,8 +2520,8 @@ module.exports = function(requestSession) {
     // function unsuspendSaleRestaurantRestApi() {
     //     var sale_id, requestData;
     //     sale_id = requestData['suspended_sale_id'];
-    //     salesControllerLib.clear_all();
-    //     salesControllerLib.copy_entire_suspended_sale(sale_id);
+    //     this.salesControllerLib.clear_all();
+    //     this.salesControllerLib.copy_entire_suspended_sale(sale_id);
     //     this.Sale_suspended.delete4Restaurant(sale_id);
     //     this._reload4RestApi();
     // }
@@ -2517,9 +2529,9 @@ module.exports = function(requestSession) {
     // function loadKotToCartRestApi() {
     //     var sale_id, requestData;
     //     sale_id = requestData['sales_id'];
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     var data;
-    //     data = salesControllerLib.copy_entire_suspended_sale4kot(sale_id);
+    //     data = this.salesControllerLib.copy_entire_suspended_sale4kot(sale_id);
     //     //echo json_encode(array($data));
     //     //$this->Sale_suspended->delete($sale_id);
     //     this._reload4RestApi();
@@ -2528,32 +2540,32 @@ module.exports = function(requestSession) {
     // function unsuspendDeliveryRestApi() {
     //     var sale_id, requestData;
     //     sale_id = requestData['sale_id'];
-    //     salesControllerLib.clear_all();
-    //     salesControllerLib.copy_entire_suspended_Delivery(sale_id);
+    //     this.salesControllerLib.clear_all();
+    //     this.salesControllerLib.copy_entire_suspended_Delivery(sale_id);
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //     data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //     data['taxes'] = salesControllerLib.get_taxes();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //     data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
     //     data['taxesData'] = this.getAllCartItemTaxes();
-    //     data['total'] = salesControllerLib.get_total();
-    //     data['discount'] = salesControllerLib.get_discount();
+    //     data['total'] = this.salesControllerLib.get_total();
+    //     data['discount'] = this.salesControllerLib.get_discount();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
     //     data['transaction_date'] = date(this.config.item('dateformat'));
     //     data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //     data['comments'] = salesControllerLib.get_comment();
+    //     data['comments'] = this.salesControllerLib.get_comment();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //     data['amount_due'] = salesControllerLib.get_amount_due();
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //     data['amount_due'] = this.salesControllerLib.get_amount_due();
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     data['company_info'] = implode('\n\
@@ -2567,7 +2579,7 @@ module.exports = function(requestSession) {
     //     data['company_account'] = this.config.item('account_number');
     //     data['company_name'] = this.config.item('company');
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
+    //     invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
     //     data['invoice_number'] = invoice_number;
     //     this._reload4RestApi(data);
     // }
@@ -2575,32 +2587,32 @@ module.exports = function(requestSession) {
     // function unsuspendOrders4TwoTerminalRestApi() {
     //     var sale_id, requestData;
     //     sale_id = requestData['sale_id'];
-    //     salesControllerLib.clear_all();
-    //     salesControllerLib.copy_entire_suspended_Delivery(sale_id);
+    //     this.salesControllerLib.clear_all();
+    //     this.salesControllerLib.copy_entire_suspended_Delivery(sale_id);
     //     var data;
-    //     data['cart'] = salesControllerLib.get_cart();
-    //     data['subtotal'] = salesControllerLib.get_subtotal();
-    //     data['discounted_subtotal'] = salesControllerLib.get_subtotal(true);
-    //     data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
-    //     data['taxes'] = salesControllerLib.get_taxes();
+    //     data['cart'] = this.salesControllerLib.get_cart();
+    //     data['subtotal'] = this.salesControllerLib.get_subtotal();
+    //     data['discounted_subtotal'] = this.salesControllerLib.get_subtotal(true);
+    //     data['tax_exclusive_subtotal'] = this.salesControllerLib.get_subtotal(true, true);
+    //     data['taxes'] = this.salesControllerLib.get_taxes();
     //     data['taxesData'] = this.getAllCartItemTaxes();
-    //     data['total'] = salesControllerLib.get_total();
-    //     data['discount'] = salesControllerLib.get_discount();
+    //     data['total'] = this.salesControllerLib.get_total();
+    //     data['discount'] = this.salesControllerLib.get_discount();
     //     data['receipt_title'] = this.lang.line('sales_receipt');
     //     data['transaction_time'] = date(this.config.item('dateformat').
     //         ' '.this.config.item('timeformat'));
     //     data['transaction_date'] = date(this.config.item('dateformat'));
     //     data['show_stock_locations'] = this.Stock_location.show_locations('sales');
     //     var customer_id;
-    //     customer_id = salesControllerLib.get_customer();
+    //     customer_id = this.salesControllerLib.get_customer();
     //     var employee_id;
     //     employee_id = this.Employee.get_logged_in_employee_info().person_id;
-    //     data['comments'] = salesControllerLib.get_comment();
+    //     data['comments'] = this.salesControllerLib.get_comment();
     //     var emp_info;
     //     emp_info = this.Employee.get_info(employee_id);
-    //     data['payments'] = salesControllerLib.get_payments();
-    //     data['amount_change'] = salesControllerLib.get_amount_due() * -1;
-    //     data['amount_due'] = salesControllerLib.get_amount_due();
+    //     data['payments'] = this.salesControllerLib.get_payments();
+    //     data['amount_change'] = this.salesControllerLib.get_amount_due() * -1;
+    //     data['amount_due'] = this.salesControllerLib.get_amount_due();
     //     data['employee'] = emp_info.first_name.
     //     ' '.emp_info.last_name;
     //     data['company_info'] = implode('\n\
@@ -2614,7 +2626,7 @@ module.exports = function(requestSession) {
     //     data['company_account'] = this.config.item('account_number');
     //     data['company_name'] = this.config.item('company');
     //     var invoice_number;
-    //     invoice_number = salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
+    //     invoice_number = this.salesControllerLib.is_invoice_number_enabled() ? invoice_number : NULL;
     //     data['invoice_number'] = invoice_number;
     //     this._reload4RestApi(data);
     // }
@@ -2633,13 +2645,13 @@ module.exports = function(requestSession) {
     //         $item4ThisKot=$this->Table->getItemsforThisKot($saleId->sale_id);
     //         $ResultJson[$saleId->sale_id]=$item4ThisKot->result();
     //     }*/
-    //     salesControllerLib.clear_all();
+    //     this.salesControllerLib.clear_all();
     //     var _key_;
     //     for (_key_ in saleIds4ThisTableOrder.result()) {
     //         var saleId;
     //         saleId = saleIds4ThisTableOrder.result()[_key_];
 
-    //         salesControllerLib.copyEntireKots4ThisOrder(saleId.sale_id);
+    //         this.salesControllerLib.copyEntireKots4ThisOrder(saleId.sale_id);
     //         //$this->Sale_suspended->delete4Restaurant($saleId->sale_id,$order_no);
     //     }
     //     this._reload4RestApi();
@@ -2649,8 +2661,8 @@ module.exports = function(requestSession) {
     // function unsuspend() {
     //     var sale_id;
     //     sale_id = this.input.post('suspended_sale_id');
-    //     salesControllerLib.clear_all();
-    //     salesControllerLib.copy_entire_suspended_sale(sale_id);
+    //     this.salesControllerLib.clear_all();
+    //     this.salesControllerLib.copy_entire_suspended_sale(sale_id);
     //     this.Sale_suspended.delete(sale_id);
     //     this._reload();
     // }

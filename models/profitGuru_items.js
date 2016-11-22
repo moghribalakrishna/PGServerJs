@@ -237,16 +237,14 @@ module.exports = function(sequelize, DataTypes) {
 						as: 'StockLocation',
 						attributes: ['location_name'],
 					}]
+				}, {
+					model: Models.profitGuru_items_taxes,
+					as: 'taxes' //,				attributes: ['discount', 'loyaltyPerc', 'discout_expiry', 'itemNprice', ]
 				}],
 				where: {
 					item_id: itemId
 				}
 			}).then(function(thisItemInfo) {
-				//var itemsCompeleteInfo = {};
-				// result = merge(thisItemInfo.dataValues, thisItemInfo.profitGuru_supplier.dataValues, thisItemInfo.profitGuru_discount.dataValues);
-				// delete result.dataValues;
-				// delete result.dataValues;
-				//resolve(result);
 				resolve(thisItemInfo.get({
 					plain: true
 				}));
