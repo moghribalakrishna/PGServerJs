@@ -219,7 +219,6 @@ module.exports = function(sequelize, DataTypes) {
 		return new Promise(function(resolve, reject) {
 
 			_self.find({
-
 				include: [{
 					model: Models.profitGuru_suppliers,
 					as: 'Supplier',
@@ -239,6 +238,7 @@ module.exports = function(sequelize, DataTypes) {
 					}]
 				}, {
 					model: Models.profitGuru_items_taxes,
+					attributes: ['name', 'percent'],
 					as: 'taxes' //,				attributes: ['discount', 'loyaltyPerc', 'discout_expiry', 'itemNprice', ]
 				}],
 				where: {

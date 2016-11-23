@@ -18,7 +18,6 @@ var salesController = require('../../../controllers/Sales'); //(salesControllerL
 var itemList;
 
 describe('Sales Controller UTS', function() {
-  debugger;
   var transaction;
   var sequlzDB;
   //loading Sales classes
@@ -63,13 +62,17 @@ describe('Sales Controller UTS', function() {
   });
 
   it('add Item to Cart', function() {
-
+    // debugger;
     // salesControllerLib = new salesControllerLib(profitGuruFaker.getFakerSession());
     salesController = new salesController(profitGuruFaker.getFakerSession());
 
     console.log('Adding ItemId=', itemList[0].dataValues.item_id)
-    salesController.addItem({
+    return salesController.addItem({
       item: itemList[0].dataValues.item_id
+    }).then(function(resp) {
+      console.log(resp);
+    }).catch(function(reason) {
+      console.log(reason);
     });
   });
 

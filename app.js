@@ -8,7 +8,12 @@ var bodyParser = require('body-parser');
 var routes = require('./routes/index');
 var users = require('./routes/users');
 var items = require('./routes/itemsRoute');
+var salesRoute = require('./routes/salesRoute');
 var suppliersRoute = require('./routes/suppliersRoute');
+var session = require('express-session');
+var sessionstore = require('sessionstore');
+var passport = require('passport');
+
 var methodOverride = require('method-override');
 var app = express();
 var errors = require('errors');
@@ -24,12 +29,37 @@ app.use(bodyParser.urlencoded({
 	extended: false
 }));
 app.use(cookieParser());
+app.use(session({
+	store: sessionstore.createSessionStore({
+		type: 'couchdb',
+		host: 'http://localhost', // optional
+		port: 5984, // optional
+		user: 'couchadmin',
+		password: 'test',
+		dbName: 'profit_sessions', // optional
+		collectionName: 'sessions', // optional
+		timeout: 10000 // optional,
+
+	}),
+	//store: sessionstore.createSessionStore(),
+	resave: false,
+	saveUninitialized: false,
+	secret: 'alienHu'
+}));
+// app.use(session({
+// 	secret: 'ilovescotchscotchyscotchscotch',
+// 	resave: false,
+// 	saveUninitialized: false
+// })); // session secret
+app.use(passport.initialize());
+app.use(passport.session());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 app.use('/users', users);
 app.use('/items', items);
 app.use('/supplier', suppliersRoute);
+app.use('/sales', salesRoute);
 //app.use(express.errorHandler());
 
 // app.use(methodOverride());
