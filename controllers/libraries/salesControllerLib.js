@@ -14,6 +14,41 @@ module.exports = function(requestSession) {
 };
 
 function salesControllerLib(session) {
+    //session = session;
+
+
+    this.setCartCustomerDetails = function() {
+
+        if (session.customer) {
+            return customerModel.findById(session.customer).then(function(customer4Cart) {
+                if (customer4Cart) {
+                    this.customerDetails = customer4Cart.get({
+                        plain: true
+                    });
+
+                }
+            });
+        } else {
+            this.customerDetails = {};
+            Promise.resolve();
+        }
+
+
+    };
+
+    this.getCartCustomerDetails = function() {
+        return this.customerDetails;
+    }
+
+    this.getAbout2AddItemDetails = function(item_id) {
+        return ItemsModel.getThisItemInfo(item_id).then(function(thisItemInfo) {
+            if (thisItemInfo) {
+                this.add2CartItemInfo = thisItemInfo;
+            } else {
+                throw new Error(' Item with ItemId=' + item_id + ' Doesnot Exists, so Cannot add to Cart');
+            }
+        });
+    };
 
     this.get_mode = function() {
         if (!session.sale_mode) {
@@ -99,6 +134,10 @@ function salesControllerLib(session) {
         session.cart = [];
     };
 
+    this.getPreAddToCartSaleDetails = function() {
+
+    };
+
     this.get_item_total = function(quantity, price, discount_percentage, include_discount) {
         if (typeof include_discount == 'undefined') {
             return getItemTotal(quantity, price);
@@ -129,15 +168,18 @@ function salesControllerLib(session) {
         include_discount = include_discount || false;
         exclude_tax = exclude_tax || false;
         var subtotal = this.calculate_subtotal(include_discount, exclude_tax);
-        return to_currency_no_money(subtotal);
+        //TODO
+        //return to_currency_no_money(subtotal);
+        return subtotal;
     };
 
     this.get_item_tax = function(quantity, price, discount_percentage, tax_percentage) {
         price = this.get_item_total(quantity, price, discount_percentage, true);
-        //TODO get this from settings, as of now considering true
-        //if (this.CI.config.config['tax_included']) {
         var tax_fraction;
         var price_tax_excl;
+        //TODO get this from settings, as of now considering true
+        //if (this.CI.config.config['tax_included']) {
+
         if (true) {
             tax_fraction = math.add(100, tax_percentage);
             tax_fraction = math.divide(tax_fraction, 100);
@@ -172,9 +214,9 @@ function salesControllerLib(session) {
             //TODO get this from settings, as of now considering true
             //if (exclude_tax && this.CI.config.config['tax_included']) {
             if (exclude_tax && true) {
-                subtotal = bcadd(subtotal, this.get_item_total_tax_exclusive(item['item_id'], item['quantity'], item['price'], item['discount'], include_discount), PRECISION);
+                subtotal = math.add(subtotal, this.get_item_total_tax_exclusive(item['item_id'], item['quantity'], item['price'], item['discount'], include_discount));
             } else {
-                subtotal = bcadd(subtotal, this.get_item_total(item['quantity'], item['price'], item['discount'], include_discount), PRECISION);
+                subtotal = math.add(subtotal, this.get_item_total(item['quantity'], item['price'], item['discount'], include_discount));
             }
         }
         return subtotal;
@@ -196,29 +238,18 @@ function salesControllerLib(session) {
     };
 
     this.is_customer_taxable = function() {
-        return new Promise(function(resolve, reject) {
-            if (session.customer) {
-                customerModel.findById(session.customer).then(function(customer4Cart) {
-                    if (customer4Cart) {
-                        customer4Cart = customer4Cart.get({
-                            plain: true
-                        });
-                        resolve(customer4Cart.taxable);
-                    } else {
-                        resolve(true);
-                    }
+        if (!this.customerDetails.taxable) {
+            return true;
+        } else {
+            return this.customerDetails.taxable;
+        }
 
-                });
-            } else {
-                resolve(true);
-            }
-        });
     };
 
     this.get_taxes = function() {
 
         this.taxes = {};
-        this.is_customer_taxable().then(function(isCustomerTaxable) {
+        return this.is_customer_taxable().then(function(isCustomerTaxable) {
             if (!isCustomerTaxable) {
                 return taxes;
             } else {
@@ -282,21 +313,17 @@ function salesControllerLib(session) {
     };
 
     this.addItem2Cart = function(item_id, quantity, itemLocation, discount, price, description, serialnumber) {
-        quantity = quantity || 1;
-        discount = discount || 0;
-        price = price || null;
-        description = description || null;
-        serialnumber = serialnumber || null;
-        this.add2CartItemInfo = {};
 
-        //TODO session.cart access is not proper fix it
-        return new Promise(function(resolve, reject) {
+        return Promise.all([this.setCartCustomerDetails(), this.getAbout2AddItemDetails(item_id)]).then(function() {
+            quantity = quantity || 1;
+            discount = discount || 0;
+            price = price || null;
+            description = description || null;
+            serialnumber = serialnumber || null;
 
-            //make sure item exists
-            return ItemsModel.getThisItemInfo(item_id).then(function(thisItemInfo) {
+            return new Promise(function(resolve, reject) {
 
-                if (thisItemInfo) {
-                    this.add2CartItemInfo = thisItemInfo;
+                if (this.add2CartItemInfo) {
 
                     var salesCart = this.get_cart();
                     var maxkey = 0;
@@ -307,6 +334,7 @@ function salesControllerLib(session) {
                     //Key to use for new entry.
                     var updatekey = 0;
                     //Key to use to update(quantity)
+
                     var discount = thisItemInfo.Discounts.discount;
 
                     for (var index in salesCart) {
@@ -317,6 +345,7 @@ function salesControllerLib(session) {
                         if (maxkey <= cartItem['line']) {
                             maxkey = cartItem['line'];
                         }
+
                         if (cartItem['item_id'] == item_id && cartItem['item_location'] == itemLocation) {
                             itemalreadyinsale = true;
                             updatekey = cartItem['line'];
@@ -336,30 +365,30 @@ function salesControllerLib(session) {
 
                     //Item already exists and is not serialized, add to quantity
                     if (!itemalreadyinsale || thisItemInfo.is_serialized) {
-                        var item = {
-                            insertkey: {
-                                'item_id': item_id,
-                                'item_location': itemLocation,
-                                'stock_name': thisItemInfo.Quantity.StockLocation.location_name,
-                                'line': insertkey,
-                                'name': thisItemInfo.name,
-                                'item_number': thisItemInfo.item_number,
-                                'description': description !== null ? description : thisItemInfo.description,
-                                'serialnumber': serialnumber !== null ? serialnumber : '',
-                                'allow_alt_description': thisItemInfo.allow_alt_description,
-                                'is_serialized': thisItemInfo.is_serialized,
-                                'quantity': quantity,
-                                'discount': discount,
-                                'in_stock': thisItemInfo.Quantity.quantity,
-                                'price': price,
-                                'total': total,
-                                'discounted_total': discounted_total,
-                                'discounted_price': this.getItemDiscount(quantity, price, discount),
-                                'loyaltyPerc': thisItemInfo.loyaltyPerc
-                            }
+                        var item = {};
+                        item[insertkey] = {
+                            'item_id': item_id,
+                            'item_location': itemLocation,
+                            'stock_name': thisItemInfo.Quantity.StockLocation.location_name,
+                            'line': insertkey,
+                            'name': thisItemInfo.name,
+                            'item_number': thisItemInfo.item_number,
+                            'description': description !== null ? description : thisItemInfo.description,
+                            'serialnumber': serialnumber !== null ? serialnumber : '',
+                            'allow_alt_description': thisItemInfo.allow_alt_description,
+                            'is_serialized': thisItemInfo.is_serialized,
+                            'quantity': quantity,
+                            'discount': discount,
+                            'in_stock': thisItemInfo.Quantity.quantity,
+                            'price': price,
+                            'total': total,
+                            'discounted_total': discounted_total,
+                            'discounted_price': this.getItemDiscount(quantity, price, discount),
+                            'loyaltyPerc': thisItemInfo.loyaltyPerc
+
                         };
-                        //add to existing array
                         salesCart.push(item);
+
                     } else {
 
                         salesCart[updatekey]['quantity'] = quantity;
@@ -369,11 +398,10 @@ function salesControllerLib(session) {
                     this.set_cart(salesCart);
                     resolve(true);
 
-                    //});
-
                 } else {
                     reject(' Item with ItemId=' + item_id + ' Doesnot Exists, so Cannot add to Cart');
                 }
+
 
             });
         });
@@ -406,28 +434,94 @@ function salesControllerLib(session) {
         if (this.add2CartItemInfo.Quantity.quantity - quantity_added < 0) {
             return 'sales_quantity_less_than_zero';
         } else {
-            if (item_quantity - quantity_added < this.add2CartItemInfo.reorder_level) {
+            if (this.add2CartItemInfo.Quantity.quantity - quantity_added < this.add2CartItemInfo.reorder_level) {
                 return 'sales_quantity_less_than_reorder_level';
             }
         }
         return false;
     };
 
-    // this.get_payments = function() {
-    //     if (!this.CI.session.userdata('payments')) {
-    //         this.set_payments({});
-    //     }
-    //     return this.CI.session.userdata('payments');
-    // };
-    // this.set_payments = function(payments_data) {
-    //     this.CI.session.set_userdata('payments', payments_data);
-    // };
-    // this.get_comment = function() {
-    //     // avoid returning a null that results in a 0 in the comment if nothing is set/available
-    //     var comment;
-    //     comment = this.CI.session.userdata('comment');
-    //     return empty(comment) ? '' : comment;
-    // };
+    this.get_discount = function() {
+
+        var discount = 0;
+        var index;
+        for (index in session.cart) {
+            var item = session.cart[index];
+            if (item['discount'] > 0) {
+
+                var item_discount = this.getItemDiscount(item['quantity'], item['price'], item['discount']);
+                discount = math.add(discount, item_discount);
+            }
+        }
+        return discount;
+    };
+
+    this.get_total = function() {
+
+        var total = this.calculate_subtotal(true);
+        //TODO get this from settings
+        //if (!this.CI.config.config['tax_included']) {
+        if (false) {
+
+            for (var index in this.taxes) {
+                var tax = this.taxes[index];
+                total = math.add(total, tax);
+            }
+        }
+        //TODO 
+        //return to_currency_no_money(total);
+        return total;
+    };
+
+
+    this.get_comment = function() {
+        // avoid returning a null that results in a 0 in the comment if nothing is set/available
+
+        return !session.comment ? '' : comment;
+    };
+
+    this.get_email_receipt = function() {
+        return session.email_receipt;
+    };
+
+    this.get_payments_total = function() {
+
+        var subtotal = 0;
+        var index;
+        for (index in session.payments) {
+
+            var payments = session.payments[index];
+            subtotal = math.add(payments['payment_amount'], subtotal);
+        }
+        //TODO
+        //return to_currency_no_money(subtotal);
+
+        return subtotal;
+    };
+
+    this.get_payments = function() {
+        if (!session.payments) {
+            session.payments = {};
+        }
+        return session.payments;
+    };
+
+    this.set_payments = function(payments_data) {
+        session.payments = payments_data;
+    };
+
+    this.get_amount_due = function() {
+
+        var amount_due = 0;
+        var payment_total = this.get_payments_total();
+        var sales_total = this.get_total();
+
+        //TODO
+        //amount_due = to_currency_no_money(bcsub(sales_total, payment_total));
+        amount_due = math.subtract(sales_total, payment_total);
+        return amount_due;
+    };
+
     // this.set_comment = function(comment) {
     //     this.CI.session.set_userdata('comment', comment);
     // };
@@ -460,9 +554,7 @@ function salesControllerLib(session) {
     // this.set_print_after_sale = function(print_after_sale) {
     //     return this.CI.session.set_userdata('sales_print_after_sale', print_after_sale);
     // };
-    // this.get_email_receipt = function() {
-    //     return this.CI.session.userdata('email_receipt');
-    // };
+
     // this.set_email_receipt = function(email_receipt) {
     //     this.CI.session.set_userdata('email_receipt', email_receipt);
     // };
@@ -508,27 +600,8 @@ function salesControllerLib(session) {
     // this.empty_payments = function() {
     //     this.CI.session.unset_userdata('payments');
     // };
-    // this.get_payments_total = function() {
-    //     var subtotal;
-    //     subtotal = 0;
-    //     var _key_;
-    //     for (_key_ in this.get_payments()) {
-    //         var payments;
-    //         payments = this.get_payments()[_key_];
-    //         subtotal = bcadd(payments['payment_amount'], subtotal, PRECISION);
-    //     }
-    //     return to_currency_no_money(subtotal);
-    // };
-    // this.get_amount_due = function() {
-    //     var amount_due;
-    //     amount_due = 0;
-    //     var payment_total;
-    //     payment_total = this.get_payments_total();
-    //     var sales_total;
-    //     sales_total = this.get_total();
-    //     amount_due = to_currency_no_money(bcsub(sales_total, payment_total, PRECISION));
-    //     return amount_due;
-    // };
+
+
 
     // this.set_sale_location = function(location) {
     //     this.CI.session.set_userdata('sale_location', location);
@@ -709,35 +782,8 @@ function salesControllerLib(session) {
     //     this.removeCustomer();
     // };
 
-    // this.get_discount = function() {
-    //     var discount;
-    //     discount = 0;
-    //     var line;
-    //     for (line in this.get_cart()) {
-    //         var item;
-    //         item = this.get_cart()[line];
-    //         if (item['discount'] > 0) {
-    //             var item_discount;
-    //             item_discount = this.get_item_discount(item['quantity'], item['price'], item['discount']);
-    //             discount = bcadd(discount, item_discount, PRECISION);
-    //         }
-    //     }
-    //     return discount;
-    // };
 
-    // this.get_total = function() {
-    //     var total;
-    //     total = this.calculate_subtotal(true);
-    //     if (!this.CI.config.config['tax_included']) {
-    //         var _key_;
-    //         for (_key_ in this.get_taxes()) {
-    //             var tax;
-    //             tax = this.get_taxes()[_key_];
-    //             total = bcadd(total, tax, PRECISION);
-    //         }
-    //     }
-    //     return to_currency_no_money(total);
-    // };
+
     // this.validate_item = function(item_id) {
     //     //make sure item exists
     //     if (!this.CI.Item.exists(item_id)) {

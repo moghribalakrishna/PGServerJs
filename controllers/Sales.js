@@ -72,6 +72,11 @@ function salesController(requestSession) {
 
     this.prepareAndDispatchResponse = function(data) {
         data = data || {};
+
+
+        //Todo we should use taxes filed only, not taxArray
+        $data['taxes'] = salesControllerLib.get_taxes();
+
         //TODO
         //var person_info = this.Employee.get_logged_in_employee_info();
         var loggedInEmployeeId = 1;
@@ -80,20 +85,22 @@ function salesController(requestSession) {
             sale: 'sale',
             return: 'return'
         };
-        data['mode'] = salesControllerLib.session.mode;
+        data['mode'] = salesControllerLib.get_mode();
         //TODO looks this is not needed at client side
         //data['stock_locations'] = this.Stock_location.get_allowed_locations('sales');
-        data['stock_location'] = salesControllerLib.session.location_id;
+        data['stock_location'] = salesControllerLib.get_sale_location();
         data['subtotal'] = salesControllerLib.get_subtotal(true);
         data['tax_exclusive_subtotal'] = salesControllerLib.get_subtotal(true, true);
 
-        //Todo we should use taxes filed only, not taxArray
-        $data['taxes'] = salesControllerLib.get_taxes();
 
         //data['taxesArray'] = this.getAllCartItemTaxes();
         data['discount'] = salesControllerLib.get_discount();
         data['total'] = salesControllerLib.get_total();
-        data['items_module_allowed'] = this.Employee.has_grant('items', loggedInEmployeeId);
+        //TODO Need get the Employee Permissions
+        //data['items_module_allowed'] = this.Employee.has_grant('items', loggedInEmployeeId);
+
+        data['items_module_allowed'] = [];
+
         data['comment'] = salesControllerLib.get_comment();
         data['email_receipt'] = salesControllerLib.get_email_receipt();
         data['payments_total'] = salesControllerLib.get_payments_total();
@@ -109,22 +116,50 @@ function salesController(requestSession) {
         //     this.lang.line('sales_credit'): this.lang.line('sales_credit')
         // };
 
-        var customer_id = salesControllerLib.get_customer();
+        //TODO invoice generation
+        // var customer_id = salesControllerLib.get_customer();
 
-        var cust_info = '';
-        if (customer_id != -1) {
-            cust_info = this.Customer.get_info(customer_id);
-            data['customer'] = cust_info.first_name + ' ' + cust_info.last_name;
-            data['customer_email'] = cust_info.email;
-            data['customer_id'] = salesControllerLib.get_customer();
-            data['loyalityeligible'] = cust_info.loyalty;
-        }
-        data['invoice_number'] = this._substitute_invoice_number(cust_info);
+        // var cust_info = '';
+        // if (customer_id != -1) {
+        //     cust_info = salesControllerLib.getCartCustomerDetails();
+        //     data['customer'] = cust_info.first_name + ' ' + cust_info.last_name;
+        //     data['customer_email'] = cust_info.email;
+        //     data['customer_id'] = salesControllerLib.get_customer();
+        //     data['loyalityeligible'] = cust_info.loyalty;
+        // }
+        // data['invoice_number'] = this._substitute_invoice_number(cust_info);
+
         data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
         data['print_after_sale'] = salesControllerLib.is_print_after_sale();
-        data['payments_cover_total'] = this._payments_cover_total();
+        data['payments_cover_total'] = this.paymentsCoverTotal();
 
     };
+
+    function paymentsCoverTotal() {
+
+        var total_payments = 0;
+
+        for (var index in salesControllerLib.get_payments()) {
+
+            var payment = salesControllerLib.get_payments()[index];
+            total_payments += payment['payment_amount'];
+        }
+
+        //TODO
+        //  if (salesControllerLib.get_mode() == 'sale' && to_currency_no_money(salesControllerLib.get_total()) - total_payments > 1.0E-6) {
+        if (salesControllerLib.get_mode() == 'sale' && (salesControllerLib.get_total() - total_payments)) {
+            return false;
+        }
+        return true;
+    }
+
+    // function _substitute_invoice_number(cust_info) {
+
+    //     var invoice_number = this.config.config['sales_invoice_format'];
+    //     invoice_number = this._substitute_variables(invoice_number, cust_info);
+    //     salesControllerLib.set_invoice_number(invoice_number, true);
+    //     return salesControllerLib.get_invoice_number();
+    // }
 
     //      function add_paymentRestApi() {
     //         var data;
@@ -1331,13 +1366,6 @@ function salesController(requestSession) {
     //         return text;
     //     }
 
-    //     function _substitute_invoice_number(cust_info) {
-    //         var invoice_number;
-    //         invoice_number = this.config.config['sales_invoice_format'];
-    //         invoice_number = this._substitute_variables(invoice_number, cust_info);
-    //         salesControllerLib.set_invoice_number(invoice_number, true);
-    //         return salesControllerLib.get_invoice_number();
-    //     }
 
     //     function _load_sale_data(sale_id) {
     //         this.Sale.create_sales_items_temp_table();
@@ -1631,21 +1659,6 @@ function salesController(requestSession) {
     //         }
     //     }
 
-    //     function _payments_cover_total() {
-    //         var total_payments;
-    //         total_payments = 0;
-    //         var _key_;
-    //         for (_key_ in salesControllerLib.get_payments()) {
-    //             var payment;
-    //             payment = salesControllerLib.get_payments()[_key_];
-    //             total_payments += payment['payment_amount'];
-    //         }
-    //         /* Changed the conditional to account for floating point rounding 
-    //     if (salesControllerLib.get_mode() == 'sale' && to_currency_no_money(salesControllerLib.get_total()) - total_payments > 1.0E-6) {
-    //         return false;
-    //     }
-    //     return true;
-    // }
 
     // function getCartTaxes() {
     //     var taxArray;
@@ -1758,7 +1771,7 @@ function salesController(requestSession) {
     //     data['invoice_number'] = this._substitute_invoice_number(cust_info);
     //     data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
     //     data['print_after_sale'] = salesControllerLib.is_print_after_sale();
-    //     data['payments_cover_total'] = this._payments_cover_total();
+    //     data['payments_cover_total'] = this.paymentsCoverTotal();
     //     //$this->load->view("sales/register",$data);
     //     console.log(json_encode({
     //         'data': data
@@ -1810,7 +1823,7 @@ function salesController(requestSession) {
     //     data['invoice_number'] = this._substitute_invoice_number(cust_info);
     //     data['invoice_number_enabled'] = salesControllerLib.is_invoice_number_enabled();
     //     data['print_after_sale'] = salesControllerLib.is_print_after_sale();
-    //     data['payments_cover_total'] = this._payments_cover_total();
+    //     data['payments_cover_total'] = this.paymentsCoverTotal();
     //     this.load.view('sales/register', data);
     // }
 

@@ -1,0 +1,19 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    //-------- Mocha options --------
+
+// Mocha: Options to run Mocha
+"mocha.options": {},
+
+// Mocha: Glob to search for test files
+"mocha.files.glob": "test/*/*/UT_*.js",
+
+// Mocha: Globs to ignore when searching for test files
+"mocha.files.ignore": [
+  "**/.git/**/*",
+  "**/node_modules/**/*"
+],
+
+// Mocha: Environment variables to run your tests
+"mocha.env": {}
+}
